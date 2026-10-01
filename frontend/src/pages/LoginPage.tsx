@@ -1,24 +1,55 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Checkbox } from '../components/ui/Checkbox';
-import { ShieldCheck, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Mail, Lock, ArrowRight, KeyRound } from 'lucide-react';
 import { useToast } from '../components/ui/Toast';
+import { useAuth } from '../hooks/useAuth';
 
 export const LoginPage: React.FC = () => {
   const { showToast } = useToast();
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Return to intended page if protected route redirected here
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    showToast(
-      'Authentication is scheduled for Phase 2 (JWT + bcrypt). This form is a UI placeholder.',
-      'info',
-      'Phase 1 Notice'
-    );
+    if (!email || !password) {
+      showToast('Please enter both email and password', 'error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await login(email, password);
+      showToast(`Welcome back, ${response.user.name}!`, 'success');
+
+      // If user is admin and was heading to /admin, send them there; otherwise default destination
+      if (response.user.role === 'admin' && from === '/') {
+        navigate('/admin');
+      } else {
+        navigate(from, { replace: true });
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Invalid credentials. Please verify your email and password.';
+      showToast(message, 'error', 'Sign In Failed');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const fillCredentials = (demoEmail: string, demoPass: string) => {
+    setEmail(demoEmail);
+    setPassword(demoPass);
   };
 
   return (
@@ -40,11 +71,27 @@ export const LoginPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Phase 1 Notice Banner */}
-        <div className="p-3 rounded bg-slate-50 dark:bg-navy-900 border border-slate-200 dark:border-navy-750 text-xs text-slate-600 dark:text-slate-400 flex items-start gap-2">
-          <ShieldCheck className="w-4 h-4 text-editorial-red shrink-0 mt-0.5" />
-          <div>
-            <strong>Phase 1 Scope:</strong> Authentication logic and backend sessions will be implemented in Phase 2.
+        {/* Quick Demo Credentials Assistant */}
+        <div className="p-3 rounded bg-slate-50 dark:bg-navy-900 border border-slate-200 dark:border-navy-750 text-xs text-slate-600 dark:text-slate-400 space-y-2">
+          <div className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
+            <KeyRound className="w-3.5 h-3.5 text-editorial-red" />
+            <span>Development & Testing Credentials</span>
+          </div>
+          <div className="flex flex-wrap gap-2 text-[11px]">
+            <button
+              type="button"
+              onClick={() => fillCredentials('admin@thenews.org', 'AdminPassword123!')}
+              className="px-2 py-1 rounded bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 hover:border-editorial-red font-medium text-slate-700 dark:text-slate-300 transition-colors"
+            >
+              Seed Admin (Admin Console)
+            </button>
+            <button
+              type="button"
+              onClick={() => fillCredentials('user@thenews.org', 'UserPassword123!')}
+              className="px-2 py-1 rounded bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 hover:border-editorial-red font-medium text-slate-700 dark:text-slate-300 transition-colors"
+            >
+              Subscriber Account
+            </button>
           </div>
         </div>
 
@@ -56,8 +103,9 @@ export const LoginPage: React.FC = () => {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="editor@thenews.org"
+            placeholder="admin@thenews.org"
             leftIcon={<Mail className="w-4 h-4" />}
+            disabled={isSubmitting}
           />
 
           <Input
@@ -68,6 +116,7 @@ export const LoginPage: React.FC = () => {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••••••"
             leftIcon={<Lock className="w-4 h-4" />}
+            disabled={isSubmitting}
           />
 
           <div className="flex items-center justify-between text-xs">
@@ -75,6 +124,7 @@ export const LoginPage: React.FC = () => {
               label="Remember this workstation"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
+              disabled={isSubmitting}
             />
             <Link
               to="/forgot-password"
@@ -84,8 +134,13 @@ export const LoginPage: React.FC = () => {
             </Link>
           </div>
 
-          <Button type="submit" className="w-full" rightIcon={<ArrowRight className="w-4 h-4" />}>
-            Sign In (Preview)
+          <Button
+            type="submit"
+            className="w-full"
+            rightIcon={<ArrowRight className="w-4 h-4" />}
+            isLoading={isSubmitting}
+          >
+            Sign In
           </Button>
         </form>
 

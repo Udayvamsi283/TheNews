@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '../services/apiClient';
 import {
-  MOCK_ADMIN_STATS,
   MOCK_RECENT_ARTICLES,
   MOCK_ACTIVITY_LOG,
   MOCK_ARTICLES
@@ -13,7 +14,6 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '.
 import { useHealth } from '../hooks/useHealth';
 import {
   FileText,
-  FilePlus,
   Eye,
   ArrowUpRight,
   TrendingUp,
@@ -21,11 +21,38 @@ import {
   Server,
   Database,
   ExternalLink,
-  Clock
+  Clock,
+  FolderTree,
+  Tag as TagIcon,
+  Users as UsersIcon,
+  Globe
 } from 'lucide-react';
 
 export const AdminDashboardPage: React.FC = () => {
   const { data: health } = useHealth();
+
+  // Real Database CMS Counts for Phase 2
+  const { data: usersData } = useQuery({
+    queryKey: ['adminUsersCount'],
+    queryFn: () => apiClient.getUsers({ limit: 1 })
+  });
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => apiClient.getCategories()
+  });
+
+  const { data: tags = [] } = useQuery({
+    queryKey: ['tags'],
+    queryFn: () => apiClient.getTags()
+  });
+
+  const { data: languages = [] } = useQuery({
+    queryKey: ['languages'],
+    queryFn: () => apiClient.getLanguages()
+  });
+
+  const userTotal = usersData?.pagination?.total ?? 0;
   const mostViewed = [...MOCK_ARTICLES].sort((a, b) => b.viewCount - a.viewCount).slice(0, 4);
 
   return (
@@ -37,17 +64,17 @@ export const AdminDashboardPage: React.FC = () => {
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
               Editorial CMS Console
             </h1>
-            <Badge variant="primary" size="sm">Phase 1</Badge>
+            <Badge variant="primary" size="sm">Phase 2 Active</Badge>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Global newsroom status, editorial pipeline metrics, and system diagnostics.
+            Global newsroom status, live user and taxonomy records, and Atlas cluster metrics.
           </p>
         </div>
 
         <div className="flex items-center gap-2.5">
-          <Link to="/admin/posts/new">
-            <Button size="sm" leftIcon={<FilePlus className="w-4 h-4" />}>
-              Add Dispatch
+          <Link to="/admin/categories">
+            <Button size="sm" variant="outline" leftIcon={<FolderTree className="w-4 h-4" />}>
+              Categories
             </Button>
           </Link>
           <Link to="/" target="_blank" rel="noreferrer">
@@ -58,30 +85,79 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Metric Stat Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {MOCK_ADMIN_STATS.map((stat, idx) => (
-          <Card key={idx} className="p-4 bg-white dark:bg-navy-850">
+      {/* Real CMS Data Cards Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        {/* Total Users */}
+        <Link to="/admin/users">
+          <Card className="p-4 bg-white dark:bg-navy-850 hover:border-editorial-red/50 transition-colors">
             <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
-              <span className="font-semibold uppercase tracking-wider text-[11px]">{stat.label}</span>
-              <span
-                className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                  stat.isPositive
-                    ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950'
-                    : 'text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-navy-750'
-                }`}
-              >
-                {stat.change}
+              <span className="font-semibold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <UsersIcon className="w-3.5 h-3.5 text-editorial-red" />
+                Registered Users
               </span>
             </div>
             <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              {stat.value}
+              {userTotal}
             </div>
             <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 truncate">
-              {stat.subtext}
+              Live Database Accounts
             </div>
           </Card>
-        ))}
+        </Link>
+
+        {/* Desks / Categories */}
+        <Link to="/admin/categories">
+          <Card className="p-4 bg-white dark:bg-navy-850 hover:border-editorial-red/50 transition-colors">
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
+              <span className="font-semibold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <FolderTree className="w-3.5 h-3.5 text-editorial-red" />
+                Taxonomy Desks
+              </span>
+            </div>
+            <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              {categories.length}
+            </div>
+            <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 truncate">
+              Hierarchical Categories
+            </div>
+          </Card>
+        </Link>
+
+        {/* Tags */}
+        <Link to="/admin/tags">
+          <Card className="p-4 bg-white dark:bg-navy-850 hover:border-editorial-red/50 transition-colors">
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
+              <span className="font-semibold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <TagIcon className="w-3.5 h-3.5 text-editorial-red" />
+                Editorial Tags
+              </span>
+            </div>
+            <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              {tags.length}
+            </div>
+            <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 truncate">
+              Reusable Topic Keys
+            </div>
+          </Card>
+        </Link>
+
+        {/* Languages */}
+        <Link to="/admin/languages">
+          <Card className="p-4 bg-white dark:bg-navy-850 hover:border-editorial-red/50 transition-colors">
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
+              <span className="font-semibold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-editorial-red" />
+                Languages
+              </span>
+            </div>
+            <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              {languages.length}
+            </div>
+            <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 truncate">
+              Multilingual Locales
+            </div>
+          </Card>
+        </Link>
 
         {/* Live System Health Card */}
         <Card className="p-4 bg-navy-900 text-white border-navy-800">
@@ -100,7 +176,7 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
           <div className="text-[11px] text-slate-300 mt-1 flex items-center gap-1 font-mono">
             <Database className="w-3 h-3 text-slate-400" />
-            <span>MongoDB: {health?.database.status || 'Checking...'}</span>
+            <span>Atlas: {health?.database.status || 'Checking...'}</span>
           </div>
         </Card>
       </div>

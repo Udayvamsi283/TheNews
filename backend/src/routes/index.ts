@@ -1,19 +1,27 @@
 import { Router } from 'express';
 import healthRoutes from './health.routes.js';
+import authRoutes from './auth.routes.js';
+import userRoutes from './user.routes.js';
+import categoryRoutes from './category.routes.js';
+import tagRoutes from './tag.routes.js';
+import languageRoutes from './language.routes.js';
 
 const apiRouter = Router();
 
-// Version 1 Base Routes
+// Base & Health
 apiRouter.use('/', healthRoutes);
 
+// Phase 2 Modules
+apiRouter.use('/auth', authRoutes);
+apiRouter.use('/users', userRoutes);
+apiRouter.use('/categories', categoryRoutes);
+apiRouter.use('/tags', tagRoutes);
+apiRouter.use('/languages', languageRoutes);
+
 /*
- * Future Module Route Registration (Phase 2+):
+ * Future Module Route Registration (Phase 3+):
  *
- * apiRouter.use('/auth', authRoutes);
- * apiRouter.use('/users', userRoutes);
  * apiRouter.use('/articles', articleRoutes);
- * apiRouter.use('/categories', categoryRoutes);
- * apiRouter.use('/tags', tagRoutes);
  * apiRouter.use('/media', mediaRoutes);
  * apiRouter.use('/comments', commentRoutes);
  * apiRouter.use('/polls', pollRoutes);

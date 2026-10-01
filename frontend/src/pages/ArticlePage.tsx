@@ -8,7 +8,6 @@ import {
   Share2,
   Bookmark,
   Printer,
-  ShieldCheck,
   MessageSquare,
   ThumbsUp,
   Tag as TagIcon,
@@ -136,14 +135,6 @@ export const ArticlePage: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* Fact check & trust badge */}
-        <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1.5 rounded border border-emerald-200 dark:border-emerald-800">
-          <ShieldCheck className="w-4 h-4 shrink-0" />
-          <span>
-            <strong>Verified Dispatch:</strong> Sourced from on-record multilateral communiqués and cross-referenced public registers.
-          </span>
-        </div>
       </header>
 
       {/* Featured Lead Image with Caption */}
@@ -186,19 +177,6 @@ export const ArticlePage: React.FC = () => {
           }
           return <p key={index}>{paragraph}</p>;
         })}
-      </div>
-
-      {/* Key Takeaways Box */}
-      <div className="p-6 rounded bg-slate-100 dark:bg-navy-850 border border-slate-200 dark:border-navy-700 space-y-3">
-        <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
-          <span className="w-1.5 h-3 bg-editorial-red inline-block" />
-          Key Reporting Takeaways
-        </h4>
-        <ul className="list-disc list-inside space-y-1.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
-          <li>Ratification marks the first enforceable cross-border carbon telemetry protocol.</li>
-          <li>Sovereign yield spreads in emerging transition debt tightened by 18 bps upon signing.</li>
-          <li>Independent verification council to begin baseline audits in Vienna during Q1.</li>
-        </ul>
       </div>
 
       {/* Tags section */}

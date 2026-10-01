@@ -1,29 +1,51 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Checkbox } from '../components/ui/Checkbox';
-import { ShieldCheck, Mail, Lock, User, ArrowRight } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { useToast } from '../components/ui/Toast';
+import { useAuth } from '../hooks/useAuth';
 
 export const RegisterPage: React.FC = () => {
   const { showToast } = useToast();
+  const { register } = useAuth();
+  const navigate = useNavigate();
+
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!termsAccepted) {
       showToast('Please accept the editorial code of ethics to proceed', 'error');
       return;
     }
-    showToast(
-      'Account registration backend will be introduced in Phase 2.',
-      'info',
-      'Phase 1 Notice'
-    );
+
+    if (password.length < 8) {
+      showToast('Password must be at least 8 characters long', 'error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await register({
+        name: fullName.trim(),
+        email: email.trim().toLowerCase(),
+        password
+      });
+
+      showToast(`Account created successfully! Welcome to The News, ${response.user.name}.`, 'success');
+      navigate('/');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Registration failed. Email may already be in use.';
+      showToast(message, 'error', 'Registration Error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -44,13 +66,6 @@ export const RegisterPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="p-3 rounded bg-slate-50 dark:bg-navy-900 border border-slate-200 dark:border-navy-750 text-xs text-slate-600 dark:text-slate-400 flex items-start gap-2">
-          <ShieldCheck className="w-4 h-4 text-editorial-red shrink-0 mt-0.5" />
-          <div>
-            <strong>Phase 1 Scope:</strong> User registration backend is scheduled for Phase 2.
-          </div>
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
             label="Full Name"
@@ -60,6 +75,7 @@ export const RegisterPage: React.FC = () => {
             onChange={(e) => setFullName(e.target.value)}
             placeholder="Jane Doe"
             leftIcon={<User className="w-4 h-4" />}
+            disabled={isSubmitting}
           />
 
           <Input
@@ -70,6 +86,7 @@ export const RegisterPage: React.FC = () => {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="jane@example.com"
             leftIcon={<Mail className="w-4 h-4" />}
+            disabled={isSubmitting}
           />
 
           <Input
@@ -80,7 +97,8 @@ export const RegisterPage: React.FC = () => {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="At least 8 characters"
             leftIcon={<Lock className="w-4 h-4" />}
-            helperText="Must contain a combination of letters, numbers, and symbols."
+            helperText="Must contain at least 8 characters."
+            disabled={isSubmitting}
           />
 
           <div className="pt-1">
@@ -89,11 +107,17 @@ export const RegisterPage: React.FC = () => {
               description="We respect your privacy and never sell reading history."
               checked={termsAccepted}
               onChange={(e) => setTermsAccepted(e.target.checked)}
+              disabled={isSubmitting}
             />
           </div>
 
-          <Button type="submit" className="w-full" rightIcon={<ArrowRight className="w-4 h-4" />}>
-            Create Account (Preview)
+          <Button
+            type="submit"
+            className="w-full"
+            rightIcon={<ArrowRight className="w-4 h-4" />}
+            isLoading={isSubmitting}
+          >
+            Create Account
           </Button>
         </form>
 

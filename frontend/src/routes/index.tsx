@@ -8,9 +8,16 @@ import { SearchPage } from '../pages/SearchPage';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
+import { ProfilePage } from '../pages/ProfilePage';
 import { AdminDashboardPage } from '../pages/AdminDashboardPage';
+import { AdminCategoriesPage } from '../pages/admin/AdminCategoriesPage';
+import { AdminTagsPage } from '../pages/admin/AdminTagsPage';
+import { AdminLanguagesPage } from '../pages/admin/AdminLanguagesPage';
+import { AdminUsersPage } from '../pages/admin/AdminUsersPage';
 import { AdminPlaceholderPage } from '../pages/AdminPlaceholderPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
+import { ProtectedRoute } from '../components/common/ProtectedRoute';
+import { AdminRoute } from '../components/common/AdminRoute';
 
 export const router = createBrowserRouter([
   // Public Editorial Shell
@@ -25,15 +32,27 @@ export const router = createBrowserRouter([
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
       { path: 'forgot-password', element: <ForgotPasswordPage /> },
+      {
+        path: 'profile',
+        element: (
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        )
+      },
       { path: '404', element: <NotFoundPage /> },
       { path: '*', element: <NotFoundPage /> }
     ]
   },
 
-  // Admin CMS Shell
+  // Admin CMS Shell - Strictly Guarded by AdminRoute
   {
     path: '/admin',
-    element: <AdminLayout />,
+    element: (
+      <AdminRoute>
+        <AdminLayout />
+      </AdminRoute>
+    ),
     children: [
       { index: true, element: <AdminDashboardPage /> },
       {
@@ -54,15 +73,15 @@ export const router = createBrowserRouter([
       },
       {
         path: 'categories',
-        element: <AdminPlaceholderPage title="Category Taxonomies" description="Manage desks, parent categories, and slug structures." />
+        element: <AdminCategoriesPage />
       },
       {
         path: 'tags',
-        element: <AdminPlaceholderPage title="Editorial Tags" description="Manage tagging metadata and indexing tags." />
+        element: <AdminTagsPage />
       },
       {
         path: 'languages',
-        element: <AdminPlaceholderPage title="Multilingual Locales" description="Configure translation workflows and language switcher." />
+        element: <AdminLanguagesPage />
       },
       {
         path: 'comments',
@@ -74,7 +93,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'users',
-        element: <AdminPlaceholderPage title="User & Journalist Accounts" description="Manage staff authors, editors, and subscribers." />
+        element: <AdminUsersPage />
       },
       {
         path: 'homepage',

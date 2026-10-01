@@ -5,9 +5,7 @@ import { NewsCard } from '../components/common/NewsCard';
 import { CompactNewsCard } from '../components/common/CompactNewsCard';
 import { SectionHeader } from '../components/common/SectionHeader';
 import { Tabs } from '../components/ui/Tabs';
-import { Card, CardContent } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Mail, CheckCircle2, TrendingUp, Sparkles, BookOpen } from 'lucide-react';
+import { TrendingUp, Sparkles } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
   const [activeFeedTab, setActiveFeedTab] = useState('all');
@@ -102,46 +100,6 @@ export const HomePage: React.FC = () => {
                   />
                 ))}
               </div>
-            </div>
-
-            {/* Newsletter Dispatch Card */}
-            <Card className="border-t-4 border-t-editorial-red bg-navy-900 text-white">
-              <CardContent className="p-6">
-                <div className="w-9 h-9 rounded bg-navy-800 text-editorial-red flex items-center justify-center mb-3">
-                  <Mail className="w-5 h-5" />
-                </div>
-                <h3 className="text-lg font-bold tracking-tight text-white mb-1">
-                  The News Morning Briefing
-                </h3>
-                <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                  Curated daily intelligence, sovereign market telemetry, and investigative dispatches delivered directly to your inbox at dawn.
-                </p>
-                <div className="space-y-2">
-                  <input
-                    type="email"
-                    placeholder="Enter your email address..."
-                    className="w-full h-9 px-3 text-xs rounded bg-navy-850 border border-navy-700 text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-editorial-red"
-                  />
-                  <Button size="sm" variant="destructive" className="w-full">
-                    Subscribe Free
-                  </Button>
-                </div>
-                <div className="mt-3 flex items-center gap-1.5 text-[10px] text-slate-400">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                  <span>No spam. One-click unsubscribe anytime.</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Editorial Mission Note */}
-            <div className="p-5 rounded border border-slate-200 dark:border-navy-750 bg-slate-50 dark:bg-navy-900/40">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200 mb-2">
-                <BookOpen className="w-4 h-4 text-editorial-red" />
-                <span>Editorial Transparency</span>
-              </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                All dispatches published by The News undergo independent verification against primary source documentation. Corrections and provenance audits are recorded publicly.
-              </p>
             </div>
           </div>
         </div>

@@ -2,6 +2,7 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import { env } from './config/env.js';
 import { apiRateLimiter } from './middleware/rateLimiter.middleware.js';
 import { notFoundHandler } from './middleware/notFound.middleware.js';
@@ -23,6 +24,9 @@ export const createApp = (): Application => {
       allowedHeaders: ['Content-Type', 'Authorization']
     })
   );
+
+  // Cookie Parser
+  app.use(cookieParser(env.COOKIE_SECRET));
 
   // Rate Limiting
   app.use('/api', apiRateLimiter);

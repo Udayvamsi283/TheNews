@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { ZodError } from 'zod';
 import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 
@@ -8,20 +9,30 @@ export interface AppError extends Error {
 }
 
 export const errorHandler = (
-  err: AppError,
+  err: any,
   req: Request,
   res: Response,
   _next: NextFunction
 ): void => {
-  const statusCode = err.statusCode || 500;
-  const message = err.message || 'Internal Server Error';
+  let statusCode = err.statusCode || 500;
+  let message = err.message || 'Internal Server Error';
+  let errors = err.errors;
+
+  if (err instanceof ZodError || err.name === 'ZodError') {
+    statusCode = 400;
+    message = 'Validation failed';
+    errors = err.errors?.map((e: any) => ({
+      field: e.path.join('.'),
+      message: e.message
+    })) || err.issues;
+  }
 
   logger.error(`[${req.method}] ${req.originalUrl} - ${statusCode} - ${message}`, err.stack);
 
   res.status(statusCode).json({
     success: false,
     message,
-    ...(err.errors ? { errors: err.errors } : {}),
+    ...(errors ? { errors } : {}),
     ...(env.NODE_ENV === 'development' ? { stack: err.stack } : {})
   });
 };

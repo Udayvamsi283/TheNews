@@ -1,14 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { MOCK_CATEGORIES } from '../../services/mockData';
-import { ShieldCheck, ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   return (
     <footer className="bg-navy-950 text-slate-300 border-t-4 border-editorial-red mt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 lg:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
-          {/* Masthead column */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+          {/* Brand column */}
           <div className="lg:col-span-2 space-y-4">
             <Link to="/" className="inline-block group focus:outline-none">
               <div className="flex items-baseline gap-1.5">
@@ -19,12 +19,8 @@ export const Footer: React.FC = () => {
               </div>
             </Link>
             <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
-              An independent, global digital news organization committed to rigorous fact-checking, investigative depth, and multilingual accountability in modern public interest journalism.
+              Authoritative, independent, and multilingual digital journalism covering global affairs, national developments, technology, and business.
             </p>
-            <div className="pt-2 flex items-center gap-2 text-xs text-slate-400">
-              <ShieldCheck className="w-4 h-4 text-editorial-red" />
-              <span>Signatory to the International Editorial Ethics Standards</span>
-            </div>
           </div>
 
           {/* Editorial Desks */}
@@ -46,31 +42,7 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Editorial & Governance */}
-          <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-white mb-4 border-b border-navy-800 pb-2">
-              Governance
-            </h4>
-            <ul className="space-y-2 text-xs text-slate-400">
-              <li>
-                <span className="cursor-default">Masthead & Ownership</span>
-              </li>
-              <li>
-                <span className="cursor-default">Editorial Independence Code</span>
-              </li>
-              <li>
-                <span className="cursor-default">Corrections Policy</span>
-              </li>
-              <li>
-                <span className="cursor-default">Whistleblower Hotline</span>
-              </li>
-              <li>
-                <span className="cursor-default">Syndication & Licensing</span>
-              </li>
-            </ul>
-          </div>
-
-          {/* Phase 1 Platform Info */}
+          {/* Platform Info */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-white mb-4 border-b border-navy-800 pb-2">
               Platform
@@ -89,13 +61,8 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <Link to="/login" className="text-slate-300 hover:text-white">
-                  Journalist Login
+                  Sign In
                 </Link>
-              </li>
-              <li className="pt-2">
-                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono bg-navy-850 text-slate-300 border border-navy-750">
-                  Release: Phase 1 Foundation
-                </span>
               </li>
             </ul>
           </div>
@@ -110,8 +77,6 @@ export const Footer: React.FC = () => {
             <span>Terms of Service</span>
             <span>•</span>
             <span>Privacy Policy</span>
-            <span>•</span>
-            <span>Multilingual Network</span>
           </div>
         </div>
       </div>

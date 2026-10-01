@@ -6,6 +6,7 @@ export const MOCK_CATEGORIES: Category[] = [
     name: 'National',
     slug: 'national',
     description: 'In-depth investigative coverage of domestic governance, public policy, and societal reform.',
+    status: 'active',
     articleCount: 142
   },
   {
@@ -13,6 +14,7 @@ export const MOCK_CATEGORIES: Category[] = [
     name: 'International',
     slug: 'international',
     description: 'Global geopolitical shifts, multilateral diplomacy, security accords, and cross-border developments.',
+    status: 'active',
     articleCount: 98
   },
   {
@@ -20,6 +22,7 @@ export const MOCK_CATEGORIES: Category[] = [
     name: 'Politics',
     slug: 'politics',
     description: 'Legislative proceedings, electoral analysis, regulatory oversight, and constitutionality debates.',
+    status: 'active',
     articleCount: 115
   },
   {
@@ -27,6 +30,7 @@ export const MOCK_CATEGORIES: Category[] = [
     name: 'Business',
     slug: 'business',
     description: 'Macroeconomic indicators, central bank policies, sovereign debt, corporate governance, and capital markets.',
+    status: 'active',
     articleCount: 84
   },
   {
@@ -34,6 +38,7 @@ export const MOCK_CATEGORIES: Category[] = [
     name: 'Technology',
     slug: 'technology',
     description: 'Autonomous systems, silicon supply chains, cybersecurity doctrine, and digital sovereignty.',
+    status: 'active',
     articleCount: 126
   },
   {
@@ -41,6 +46,7 @@ export const MOCK_CATEGORIES: Category[] = [
     name: 'Sports',
     slug: 'sports',
     description: 'Championship tournaments, athletic performance analytics, sporting federation governance, and athlete profiles.',
+    status: 'active',
     articleCount: 67
   },
   {
@@ -48,6 +54,7 @@ export const MOCK_CATEGORIES: Category[] = [
     name: 'Entertainment',
     slug: 'entertainment',
     description: 'Cinematic retrospectives, literary reviews, cultural preservation, and performing arts commentary.',
+    status: 'active',
     articleCount: 53
   }
 ];

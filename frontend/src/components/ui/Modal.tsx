@@ -10,6 +10,7 @@ export interface ModalProps {
   children: React.ReactNode;
   className?: string;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -19,8 +20,10 @@ export const Modal: React.FC<ModalProps> = ({
   description,
   children,
   className,
-  maxWidth = 'md'
+  maxWidth,
+  size = 'md'
 }) => {
+  const effectiveSize = maxWidth || size;
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -58,7 +61,7 @@ export const Modal: React.FC<ModalProps> = ({
       <div
         className={cn(
           'w-full bg-white dark:bg-navy-850 rounded border border-slate-200 dark:border-navy-700 shadow-xl overflow-hidden relative',
-          maxWidths[maxWidth],
+          maxWidths[effectiveSize],
           className
         )}
         onClick={(e) => e.stopPropagation()}
