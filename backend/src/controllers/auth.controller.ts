@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -5,25 +6,38 @@ import { User } from '../models/user.model.js';
 import { env } from '../config/env.js';
 import { registerSchema, loginSchema } from '../validators/auth.validator.js';
 import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
+import { CSRF_COOKIE_NAME } from '../middleware/csrf.middleware.js';
 
 const COOKIE_NAME = 'token';
 const BCRYPT_SALT_ROUNDS = 10;
+
+const getCookieOptions = () => {
+  const isProduction = env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? ('none' as const) : ('lax' as const),
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    path: '/'
+  };
+};
 
 const sendAuthToken = (res: Response, userId: string, role: string) => {
   const token = jwt.sign({ id: userId, role }, env.JWT_SECRET, {
     expiresIn: '7d'
   });
 
-  const isProduction = env.NODE_ENV === 'production';
+  res.cookie(COOKIE_NAME, token, getCookieOptions());
+};
 
-  res.cookie(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'strict' : 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+export const getCsrfToken = (req: Request, res: Response): void => {
+  const token = res.locals.csrfToken || req.cookies?.[CSRF_COOKIE_NAME];
+
+  res.status(200).json({
+    success: true,
+    csrfToken: token,
+    data: { csrfToken: token }
   });
-
-  return token;
 };
 
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -52,14 +66,13 @@ export const register = async (req: Request, res: Response, next: NextFunction):
       status: 'active'
     });
 
-    const token = sendAuthToken(res, user._id.toString(), user.role);
+    sendAuthToken(res, user._id.toString(), user.role);
 
     res.status(201).json({
       success: true,
       message: 'Account registered successfully.',
       data: {
-        user,
-        accessToken: token
+        user
       }
     });
   } catch (error) {
@@ -98,14 +111,16 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
       return;
     }
 
-    const token = sendAuthToken(res, user._id.toString(), user.role);
+    sendAuthToken(res, user._id.toString(), user.role);
+
+    // Remove passwordHash from user object before sending
+    user.passwordHash = undefined as any;
 
     res.status(200).json({
       success: true,
       message: 'Signed in successfully.',
       data: {
-        user,
-        accessToken: token
+        user
       }
     });
   } catch (error) {
@@ -114,11 +129,15 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
 };
 
 export const logout = (_req: Request, res: Response): void => {
-  res.clearCookie(COOKIE_NAME, {
+  const isProduction = env.NODE_ENV === 'production';
+  const clearOptions = {
     httpOnly: true,
-    sameSite: env.NODE_ENV === 'production' ? 'strict' : 'lax',
-    secure: env.NODE_ENV === 'production'
-  });
+    sameSite: isProduction ? ('none' as const) : ('lax' as const),
+    secure: isProduction,
+    path: '/'
+  };
+
+  res.clearCookie(COOKIE_NAME, clearOptions);
 
   res.status(200).json({
     success: true,

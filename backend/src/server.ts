@@ -2,6 +2,7 @@ import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { connectDatabase } from './config/database.js';
 import { logger } from './utils/logger.js';
+import { startPostScheduler, stopPostScheduler } from './services/scheduler.service.js';
 import mongoose from 'mongoose';
 
 const startServer = async () => {
@@ -10,10 +11,13 @@ const startServer = async () => {
     logger.info('Initializing MongoDB connection...');
     await connectDatabase();
 
-    // 2. Create Express application
+    // 2. Start post scheduler
+    startPostScheduler();
+
+    // 3. Create Express application
     const app = createApp();
 
-    // 3. Start HTTP server
+    // 4. Start HTTP server
     const server = app.listen(env.PORT, () => {
       logger.info(`The News API server running in [${env.NODE_ENV}] mode on http://localhost:${env.PORT}`);
       logger.info(`Health check endpoint: http://localhost:${env.PORT}/api/v1/health`);
@@ -22,6 +26,7 @@ const startServer = async () => {
     // Graceful Shutdown Handlers
     const handleShutdown = async (signal: string) => {
       logger.info(`Received ${signal}. Shutting down gracefully...`);
+      stopPostScheduler();
       server.close(async () => {
         logger.info('HTTP server closed.');
         try {

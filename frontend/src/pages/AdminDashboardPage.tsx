@@ -11,15 +11,13 @@ import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
-import { useHealth } from '../hooks/useHealth';
 import {
   FileText,
   Eye,
   ArrowUpRight,
   TrendingUp,
   Activity,
-  Server,
-  Database,
+  Image as ImageIcon,
   ExternalLink,
   Clock,
   FolderTree,
@@ -29,7 +27,6 @@ import {
 } from 'lucide-react';
 
 export const AdminDashboardPage: React.FC = () => {
-  const { data: health } = useHealth();
 
   // Real Database CMS Counts for Phase 2
   const { data: usersData } = useQuery({
@@ -159,26 +156,23 @@ export const AdminDashboardPage: React.FC = () => {
           </Card>
         </Link>
 
-        {/* Live System Health Card */}
-        <Card className="p-4 bg-navy-900 text-white border-navy-800">
-          <div className="flex items-center justify-between text-xs text-slate-300 mb-1">
-            <span className="font-semibold uppercase tracking-wider text-[11px] flex items-center gap-1">
-              <Server className="w-3.5 h-3.5 text-editorial-red" />
-              API & DB Status
-            </span>
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-          </div>
-          <div className="text-xl font-black tracking-tight text-white flex items-center gap-2">
-            <span>{health?.database.connected ? 'Operational' : 'Connecting'}</span>
-          </div>
-          <div className="text-[11px] text-slate-300 mt-1 flex items-center gap-1 font-mono">
-            <Database className="w-3 h-3 text-slate-400" />
-            <span>Atlas: {health?.database.status || 'Checking...'}</span>
-          </div>
-        </Card>
+        {/* Media Library */}
+        <Link to="/admin/media">
+          <Card className="p-4 bg-white dark:bg-navy-850 hover:border-editorial-red/50 transition-colors">
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
+              <span className="font-semibold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <ImageIcon className="w-3.5 h-3.5 text-editorial-red" />
+                Media Assets
+              </span>
+            </div>
+            <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              Library
+            </div>
+            <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 truncate">
+              Cloudinary Media
+            </div>
+          </Card>
+        </Link>
       </div>
 
       {/* Main Grid: Recent Articles Table & Sidebar Insights */}

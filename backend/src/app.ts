@@ -7,6 +7,7 @@ import { env } from './config/env.js';
 import { apiRateLimiter } from './middleware/rateLimiter.middleware.js';
 import { notFoundHandler } from './middleware/notFound.middleware.js';
 import { errorHandler } from './middleware/error.middleware.js';
+import { csrfProtection } from './middleware/csrf.middleware.js';
 import apiRouter from './routes/index.js';
 
 export const createApp = (): Application => {
@@ -21,12 +22,15 @@ export const createApp = (): Application => {
       origin: [env.CLIENT_URL, 'http://localhost:5173', 'http://127.0.0.1:5173'],
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization']
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'x-csrf-token']
     })
   );
 
   // Cookie Parser
   app.use(cookieParser(env.COOKIE_SECRET));
+
+  // CSRF Protection
+  app.use(csrfProtection);
 
   // Rate Limiting
   app.use('/api', apiRateLimiter);

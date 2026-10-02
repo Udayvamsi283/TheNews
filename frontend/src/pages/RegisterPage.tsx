@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
-import { Checkbox } from '../components/ui/Checkbox';
 import { Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../hooks/useAuth';
@@ -15,15 +14,9 @@ export const RegisterPage: React.FC = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!termsAccepted) {
-      showToast('Please accept the editorial code of ethics to proceed', 'error');
-      return;
-    }
 
     if (password.length < 8) {
       showToast('Password must be at least 8 characters long', 'error');
@@ -100,16 +93,6 @@ export const RegisterPage: React.FC = () => {
             helperText="Must contain at least 8 characters."
             disabled={isSubmitting}
           />
-
-          <div className="pt-1">
-            <Checkbox
-              label="I agree to the Terms of Service & Editorial Code"
-              description="We respect your privacy and never sell reading history."
-              checked={termsAccepted}
-              onChange={(e) => setTermsAccepted(e.target.checked)}
-              disabled={isSubmitting}
-            />
-          </div>
 
           <Button
             type="submit"

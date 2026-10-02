@@ -17,7 +17,6 @@ export interface User {
 
 export interface AuthResponse {
   user: User;
-  accessToken?: string;
 }
 
 export type CategoryStatus = 'active' | 'inactive';
@@ -64,6 +63,161 @@ export interface Pagination {
   limit: number;
   pages?: number;
   totalPages?: number;
+}
+
+export type PostFormat =
+  | 'article'
+  | 'gallery'
+  | 'sorted_list'
+  | 'table_of_contents'
+  | 'video'
+  | 'audio'
+  | 'poll'
+  | 'event';
+
+export type PostStatus = 'draft' | 'published' | 'scheduled' | 'trashed';
+
+export interface FeaturedImage {
+  url: string;
+  publicId?: string;
+  alt?: string;
+  caption?: string;
+  width?: number;
+  height?: number;
+}
+
+export interface SeoMetadata {
+  metaTitle?: string;
+  metaDescription?: string;
+  canonicalUrl?: string;
+  ogTitle?: string;
+  ogDescription?: string;
+  ogImage?: string;
+  keywords?: string[];
+}
+
+export interface FaqItem {
+  question: string;
+  answer: string;
+}
+
+export interface GalleryItem {
+  image: string;
+  publicId?: string;
+  title?: string;
+  description?: string;
+  order: number;
+}
+
+export interface SortedListItem {
+  itemNumber: number;
+  title: string;
+  content?: string;
+  image?: string;
+  publicId?: string;
+}
+
+export interface VideoDetails {
+  videoUrl: string;
+  embedUrl?: string;
+  provider?: 'youtube' | 'vimeo' | 'direct' | 'other';
+  duration?: number;
+}
+
+export interface AudioDetails {
+  audioUrl: string;
+  coverImage?: string;
+  duration?: number;
+  artist?: string;
+}
+
+export interface PollOption {
+  id: string;
+  text: string;
+  votes?: number;
+}
+
+export interface PollDetails {
+  question: string;
+  options: PollOption[];
+  startTime?: string | Date;
+  endTime?: string | Date;
+}
+
+export interface EventDetails {
+  startDate?: string | Date;
+  endDate?: string | Date;
+  locationName?: string;
+  address?: string;
+  mapUrl?: string;
+  eventUrl?: string;
+}
+
+export interface Translation {
+  language: string | Language;
+  languageCode: string;
+  title: string;
+  slug: string;
+  summary?: string;
+  content?: string;
+  seo?: SeoMetadata;
+}
+
+export interface Post {
+  _id: string;
+  id?: string;
+  title: string;
+  slug: string;
+  summary?: string;
+  content?: string;
+  author: User;
+  category: Category;
+  tags: Tag[];
+  language: Language;
+  postFormat: PostFormat;
+  featuredImage?: FeaturedImage;
+  images?: FeaturedImage[];
+  status: PostStatus;
+  publishedAt?: string;
+  scheduledAt?: string;
+  isFullWidth?: boolean;
+  registeredOnly?: boolean;
+  externalUrl?: string;
+  seo?: SeoMetadata;
+  faq?: FaqItem[];
+  translations?: Translation[];
+  galleryItems?: GalleryItem[];
+  sortedListItems?: SortedListItem[];
+  videoDetails?: VideoDetails;
+  audioDetails?: AudioDetails;
+  pollDetails?: PollDetails;
+  eventDetails?: EventDetails;
+  previewToken?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type MediaResourceType = 'image' | 'video' | 'audio' | 'document';
+
+export interface MediaAsset {
+  _id: string;
+  publicId: string;
+  resourceType: MediaResourceType;
+  url: string;
+  secureUrl: string;
+  filename: string;
+  originalFilename: string;
+  mimeType: string;
+  bytes: number;
+  width?: number;
+  height?: number;
+  duration?: number;
+  alt?: string;
+  caption?: string;
+  folder: string;
+  uploadedBy?: User;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface HealthResponse {

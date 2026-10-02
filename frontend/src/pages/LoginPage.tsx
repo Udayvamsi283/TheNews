@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Checkbox } from '../components/ui/Checkbox';
-import { Mail, Lock, ArrowRight, KeyRound } from 'lucide-react';
+import { Mail, Lock, ArrowRight } from 'lucide-react';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../hooks/useAuth';
 
@@ -47,11 +47,6 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const fillCredentials = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-  };
-
   return (
     <div className="max-w-md mx-auto py-8 sm:py-12">
       <div className="bg-white dark:bg-navy-850 p-6 sm:p-8 rounded border border-slate-200 dark:border-navy-700 shadow-sm space-y-6">
@@ -69,30 +64,6 @@ export const LoginPage: React.FC = () => {
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Access your editorial dashboard, saved reading dossiers, and newsroom workflows.
           </p>
-        </div>
-
-        {/* Quick Demo Credentials Assistant */}
-        <div className="p-3 rounded bg-slate-50 dark:bg-navy-900 border border-slate-200 dark:border-navy-750 text-xs text-slate-600 dark:text-slate-400 space-y-2">
-          <div className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
-            <KeyRound className="w-3.5 h-3.5 text-editorial-red" />
-            <span>Development & Testing Credentials</span>
-          </div>
-          <div className="flex flex-wrap gap-2 text-[11px]">
-            <button
-              type="button"
-              onClick={() => fillCredentials('admin@thenews.org', 'AdminPassword123!')}
-              className="px-2 py-1 rounded bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 hover:border-editorial-red font-medium text-slate-700 dark:text-slate-300 transition-colors"
-            >
-              Seed Admin (Admin Console)
-            </button>
-            <button
-              type="button"
-              onClick={() => fillCredentials('user@thenews.org', 'UserPassword123!')}
-              className="px-2 py-1 rounded bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 hover:border-editorial-red font-medium text-slate-700 dark:text-slate-300 transition-colors"
-            >
-              Subscriber Account
-            </button>
-          </div>
         </div>
 
         {/* Form */}

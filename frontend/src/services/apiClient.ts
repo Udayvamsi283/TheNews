@@ -6,7 +6,9 @@ import {
   Category,
   Tag,
   Language,
-  Pagination
+  Pagination,
+  Post,
+  MediaAsset
 } from '../types';
 
 export class ApiError extends Error {
@@ -21,53 +23,64 @@ export class ApiError extends Error {
   }
 }
 
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
+  return match ? decodeURIComponent(match[3]) : null;
+}
+
 class ApiClient {
   private baseUrl: string;
-  private token: string | null = null;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-    // Restore token from localStorage if available
-    if (typeof window !== 'undefined') {
-      this.token = localStorage.getItem('the_news_token');
-    }
   }
 
-  public setToken(token: string | null) {
-    this.token = token;
-    if (typeof window !== 'undefined') {
-      if (token) {
-        localStorage.setItem('the_news_token', token);
-      } else {
-        localStorage.removeItem('the_news_token');
-      }
+  public async fetchCsrfToken(): Promise<string> {
+    try {
+      const res = await fetch(`${this.baseUrl}/auth/csrf-token`, {
+        credentials: 'include'
+      });
+      const data = await res.json();
+      return data.csrfToken || '';
+    } catch {
+      return '';
     }
-  }
-
-  public getToken(): string | null {
-    return this.token;
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+    const method = (options.method || 'GET').toUpperCase();
+    const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
 
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>)
     };
 
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+    // Only set Content-Type to JSON if body is NOT FormData and not already set
+    if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    // Attach CSRF token on mutating requests
+    if (isMutating) {
+      let csrfToken = getCookie('csrf-token');
+      if (!csrfToken) {
+        csrfToken = await this.fetchCsrfToken();
+      }
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
 
     try {
       const response = await fetch(url, {
         ...options,
         headers,
-        credentials: 'include', // Ensures HTTP-only cookie is sent
+        credentials: 'include', // Always send HTTP-only auth cookies
         signal: controller.signal
       });
 
@@ -107,9 +120,6 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(data)
     });
-    if (res.data.accessToken) {
-      this.setToken(res.data.accessToken);
-    }
     return res.data;
   }
 
@@ -118,18 +128,11 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(data)
     });
-    if (res.data.accessToken) {
-      this.setToken(res.data.accessToken);
-    }
     return res.data;
   }
 
   public async logout(): Promise<void> {
-    try {
-      await this.request<{ success: boolean }>('/auth/logout', { method: 'POST' });
-    } finally {
-      this.setToken(null);
-    }
+    await this.request<{ success: boolean }>('/auth/logout', { method: 'POST' });
   }
 
   public async getMe(): Promise<User> {
@@ -298,6 +301,173 @@ class ApiClient {
   public async deleteLanguage(id: string): Promise<void> {
     await this.request<{ success: boolean }>(`/languages/${id}`, { method: 'DELETE' });
   }
+
+  // Media Library
+  public async getMedia(params: {
+    page?: number;
+    limit?: number;
+    resourceType?: string;
+    search?: string;
+  } = {}): Promise<{ data: MediaAsset[]; pagination: Pagination }> {
+    const searchParams = new URLSearchParams();
+    if (params.page) searchParams.append('page', params.page.toString());
+    if (params.limit) searchParams.append('limit', params.limit.toString());
+    if (params.resourceType) searchParams.append('resourceType', params.resourceType);
+    if (params.search) searchParams.append('search', params.search);
+
+    const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+    const res = await this.request<{
+      success: boolean;
+      data: MediaAsset[];
+      pagination: Pagination;
+    }>(`/media${query}`);
+    return { data: res.data, pagination: res.pagination };
+  }
+
+  public async uploadMedia(
+    file: File,
+    options: { folder?: string; alt?: string; caption?: string } = {}
+  ): Promise<MediaAsset> {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (options.folder) formData.append('folder', options.folder);
+    if (options.alt) formData.append('alt', options.alt);
+    if (options.caption) formData.append('caption', options.caption);
+
+    const res = await this.request<{ success: boolean; data: MediaAsset }>('/media', {
+      method: 'POST',
+      body: formData
+    });
+    return res.data;
+  }
+
+  public async updateMedia(
+    id: string,
+    data: { alt?: string; caption?: string }
+  ): Promise<MediaAsset> {
+    const res = await this.request<{ success: boolean; data: MediaAsset }>(`/media/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    });
+    return res.data;
+  }
+
+  public async deleteMedia(id: string): Promise<void> {
+    await this.request<{ success: boolean }>(`/media/${id}`, { method: 'DELETE' });
+  }
+
+  // Posts CMS
+  public async getPosts(params: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    format?: string;
+    category?: string;
+    language?: string;
+    search?: string;
+  } = {}): Promise<{ data: Post[]; pagination: Pagination }> {
+    const searchParams = new URLSearchParams();
+    if (params.page) searchParams.append('page', params.page.toString());
+    if (params.limit) searchParams.append('limit', params.limit.toString());
+    if (params.status) searchParams.append('status', params.status);
+    if (params.format) searchParams.append('format', params.format);
+    if (params.category) searchParams.append('category', params.category);
+    if (params.language) searchParams.append('language', params.language);
+    if (params.search) searchParams.append('search', params.search);
+
+    const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+    const res = await this.request<{
+      success: boolean;
+      data: Post[];
+      pagination: Pagination;
+    }>(`/posts${query}`);
+    return { data: res.data, pagination: res.pagination };
+  }
+
+  public async getPost(id: string): Promise<Post> {
+    const res = await this.request<{ success: boolean; data: Post }>(`/posts/${id}`);
+    return res.data;
+  }
+
+  public async getPostPreview(tokenOrId: string): Promise<Post> {
+    const res = await this.request<{ success: boolean; data: Post }>(`/posts/preview/${tokenOrId}`);
+    return res.data;
+  }
+
+  public async createPost(data: any): Promise<Post> {
+    const res = await this.request<{ success: boolean; data: Post }>('/posts', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    return res.data;
+  }
+
+  public async updatePost(id: string, data: any): Promise<Post> {
+    const res = await this.request<{ success: boolean; data: Post }>(`/posts/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    });
+    return res.data;
+  }
+
+  public async deletePost(id: string, permanent = false): Promise<void> {
+    const query = permanent ? '?permanent=true' : '';
+    await this.request<{ success: boolean }>(`/posts/${id}${query}`, { method: 'DELETE' });
+  }
+
+  public async restorePost(id: string): Promise<Post> {
+    const res = await this.request<{ success: boolean; data: Post }>(`/posts/${id}/restore`, {
+      method: 'POST'
+    });
+    return res.data;
+  }
+
+  public async duplicatePost(id: string): Promise<Post> {
+    const res = await this.request<{ success: boolean; data: Post }>(`/posts/${id}/duplicate`, {
+      method: 'POST'
+    });
+    return res.data;
+  }
+
+  public async publishPost(id: string): Promise<Post> {
+    const res = await this.request<{ success: boolean; data: Post }>(`/posts/${id}/publish`, {
+      method: 'POST'
+    });
+    return res.data;
+  }
+
+  public async unpublishPost(id: string): Promise<Post> {
+    const res = await this.request<{ success: boolean; data: Post }>(`/posts/${id}/unpublish`, {
+      method: 'POST'
+    });
+    return res.data;
+  }
+
+  public async bulkUploadPosts(
+    fileOrRows: File | any[],
+    options: { action?: 'preview' | 'import'; targetStatus?: string } = {}
+  ): Promise<any> {
+    let body: any;
+    if (fileOrRows instanceof File) {
+      body = new FormData();
+      body.append('file', fileOrRows);
+      if (options.action) body.append('action', options.action);
+      if (options.targetStatus) body.append('targetStatus', options.targetStatus);
+    } else {
+      body = JSON.stringify({
+        rows: fileOrRows,
+        action: options.action || 'preview',
+        targetStatus: options.targetStatus || 'draft'
+      });
+    }
+
+    const res = await this.request<{ success: boolean; [key: string]: any }>('/posts/bulk-upload', {
+      method: 'POST',
+      body
+    });
+    return res;
+  }
 }
 
 export const apiClient = new ApiClient(env.API_BASE_URL);
+

@@ -35,7 +35,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return await apiClient.getMe();
       } catch (err: unknown) {
         // Unauthenticated or expired session
-        apiClient.setToken(null);
         return null;
       }
     },

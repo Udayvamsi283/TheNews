@@ -28,7 +28,6 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../hooks/useAuth';
-import { SystemStatusBanner } from '../common/SystemStatusBanner';
 import { cn } from '../../lib/utils';
 import { Avatar } from '../ui/Avatar';
 
@@ -61,7 +60,7 @@ export const AdminLayout: React.FC = () => {
       items: [
         { label: 'Add Post', to: '/admin/posts/new', icon: <FilePlus className="w-4 h-4" /> },
         { label: 'Posts', to: '/admin/posts', icon: <FileText className="w-4 h-4" /> },
-        { label: 'Bulk Upload', to: '/admin/posts/bulk', icon: <UploadCloud className="w-4 h-4" /> }
+        { label: 'Bulk Upload', to: '/admin/bulk-upload', icon: <UploadCloud className="w-4 h-4" /> }
       ]
     },
     {
@@ -136,7 +135,6 @@ export const AdminLayout: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <SystemStatusBanner />
           <button
             onClick={toggleTheme}
             className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-navy-800 text-slate-700 dark:text-slate-300"
@@ -262,10 +260,8 @@ export const AdminLayout: React.FC = () => {
               ))}
             </div>
 
-            {/* Actions: System health, theme toggle, live site */}
+            {/* Actions: theme toggle, live site */}
             <div className="flex items-center gap-4">
-              <SystemStatusBanner />
-
               <button
                 onClick={toggleTheme}
                 type="button"

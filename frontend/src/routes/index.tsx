@@ -14,6 +14,12 @@ import { AdminCategoriesPage } from '../pages/admin/AdminCategoriesPage';
 import { AdminTagsPage } from '../pages/admin/AdminTagsPage';
 import { AdminLanguagesPage } from '../pages/admin/AdminLanguagesPage';
 import { AdminUsersPage } from '../pages/admin/AdminUsersPage';
+import { AdminPostsPage } from '../pages/admin/AdminPostsPage';
+import { AdminNewPostPage } from '../pages/admin/AdminNewPostPage';
+import { AdminEditPostPage } from '../pages/admin/AdminEditPostPage';
+import { AdminPostPreviewPage } from '../pages/admin/AdminPostPreviewPage';
+import { AdminMediaPage } from '../pages/admin/AdminMediaPage';
+import { AdminBulkUploadPage } from '../pages/admin/AdminBulkUploadPage';
 import { AdminPlaceholderPage } from '../pages/AdminPlaceholderPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { ProtectedRoute } from '../components/common/ProtectedRoute';
@@ -28,6 +34,7 @@ export const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: 'category/:slug', element: <CategoryPage /> },
       { path: 'article/:slug', element: <ArticlePage /> },
+      { path: 'preview/:id', element: <AdminPostPreviewPage /> },
       { path: 'search', element: <SearchPage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
@@ -57,19 +64,31 @@ export const router = createBrowserRouter([
       { index: true, element: <AdminDashboardPage /> },
       {
         path: 'posts',
-        element: <AdminPlaceholderPage title="Articles & Dispatches" description="Manage all published, draft, and scheduled reporting." />
+        element: <AdminPostsPage />
       },
       {
         path: 'posts/new',
-        element: <AdminPlaceholderPage title="Compose New Article" description="Article editor (TipTap) and publishing pipeline." />
+        element: <AdminNewPostPage />
+      },
+      {
+        path: 'posts/:id/edit',
+        element: <AdminEditPostPage />
+      },
+      {
+        path: 'posts/:id/preview',
+        element: <AdminPostPreviewPage />
+      },
+      {
+        path: 'bulk-upload',
+        element: <AdminBulkUploadPage />
       },
       {
         path: 'posts/bulk',
-        element: <AdminPlaceholderPage title="Bulk Import / Ingestion" description="Batch upload editorial dispatches and wire syndication." />
+        element: <AdminBulkUploadPage />
       },
       {
         path: 'media',
-        element: <AdminPlaceholderPage title="Media Asset Library" description="Cloudinary media management, photos, and infographics." />
+        element: <AdminMediaPage />
       },
       {
         path: 'categories',

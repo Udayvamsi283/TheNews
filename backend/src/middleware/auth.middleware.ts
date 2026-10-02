@@ -7,6 +7,8 @@ export interface AuthenticatedRequest extends Request {
   user?: IUser;
 }
 
+export type AuthRequest = AuthenticatedRequest;
+
 interface JwtPayload {
   id: string;
   role: UserRole;

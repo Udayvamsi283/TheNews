@@ -5,6 +5,7 @@ import { User } from '../models/user.model.js';
 import { Category } from '../models/category.model.js';
 import { Tag } from '../models/tag.model.js';
 import { Language } from '../models/language.model.js';
+import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 
 export const seedDatabase = async () => {
@@ -73,20 +74,29 @@ export const seedDatabase = async () => {
       logger.info('Tags seeded successfully.');
     }
 
-    // 4. Default Admin User
-    const existingAdmin = await User.findOne({ role: 'admin' });
+    // 4. Administrator User from Environment
+    const adminEmail = env.ADMIN_EMAIL.toLowerCase().trim();
+    const existingAdmin = await User.findOne({ email: adminEmail });
+    const passwordHash = await bcrypt.hash(env.ADMIN_PASSWORD, 10);
+
     if (!existingAdmin) {
-      logger.info('Seeding initial administrator user...');
-      const passwordHash = await bcrypt.hash('AdminPassword123!', 10);
+      logger.info(`Seeding initial administrator user (${adminEmail})...`);
       await User.create({
         name: 'Editorial Administrator',
-        email: 'admin@thenews.org',
+        email: adminEmail,
         passwordHash,
         role: 'admin',
         preferredLanguage: 'en',
         status: 'active'
       });
-      logger.info('Admin user seeded: admin@thenews.org / AdminPassword123!');
+      logger.info('Admin user created successfully from environment variables.');
+    } else {
+      // Rotate password and ensure admin role
+      existingAdmin.passwordHash = passwordHash;
+      existingAdmin.role = 'admin';
+      existingAdmin.status = 'active';
+      await existingAdmin.save();
+      logger.info(`Admin user (${adminEmail}) credentials synchronized with environment.`);
     }
 
     logger.info('Database seeding completed successfully.');
