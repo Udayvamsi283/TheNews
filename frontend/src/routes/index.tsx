@@ -9,6 +9,11 @@ import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
 import { ProfilePage } from '../pages/ProfilePage';
+import { LatestPage } from '../pages/LatestPage';
+import { TrendingPage } from '../pages/TrendingPage';
+import { VideosPage } from '../pages/VideosPage';
+import { SavedArticlesPage } from '../pages/SavedArticlesPage';
+import { SettingsPage } from '../pages/SettingsPage';
 import { AdminDashboardPage } from '../pages/AdminDashboardPage';
 import { AdminCategoriesPage } from '../pages/admin/AdminCategoriesPage';
 import { AdminTagsPage } from '../pages/admin/AdminTagsPage';
@@ -32,6 +37,9 @@ export const router = createBrowserRouter([
     element: <PublicLayout />,
     children: [
       { index: true, element: <HomePage /> },
+      { path: 'latest', element: <LatestPage /> },
+      { path: 'trending', element: <TrendingPage /> },
+      { path: 'videos', element: <VideosPage /> },
       { path: 'category/:slug', element: <CategoryPage /> },
       { path: 'article/:slug', element: <ArticlePage /> },
       { path: 'preview/:id', element: <AdminPostPreviewPage /> },
@@ -39,6 +47,22 @@ export const router = createBrowserRouter([
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
       { path: 'forgot-password', element: <ForgotPasswordPage /> },
+      {
+        path: 'saved',
+        element: (
+          <ProtectedRoute>
+            <SavedArticlesPage />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'settings',
+        element: (
+          <ProtectedRoute>
+            <SettingsPage />
+          </ProtectedRoute>
+        )
+      },
       {
         path: 'profile',
         element: (

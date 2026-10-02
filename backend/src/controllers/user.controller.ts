@@ -55,6 +55,34 @@ export const updateProfile = async (
   }
 };
 
+export const updatePreferences = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { preferredLanguage, interests } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.user!._id,
+      {
+        $set: {
+          ...(preferredLanguage !== undefined && { preferredLanguage }),
+          ...(interests !== undefined && { interests })
+        }
+      },
+      { new: true }
+    ).populate('interests', 'name slug');
+
+    res.status(200).json({
+      success: true,
+      message: 'Preferences updated successfully.',
+      data: { user }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const changePassword = async (
   req: AuthenticatedRequest,
   res: Response,

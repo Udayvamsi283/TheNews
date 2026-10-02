@@ -44,7 +44,10 @@ export const uploadToCloudinary = (
 ): Promise<CloudinaryUploadResult> => {
   return new Promise((resolve, reject) => {
     if (!isCloudinaryConfigured) {
-      // Graceful fallback for local development without active Cloudinary account
+      if (env.NODE_ENV === 'production') {
+        return reject(new Error('Server configuration error: Cloudinary credentials are missing in production.'));
+      }
+      // Graceful fallback strictly isolated for local development without active Cloudinary account
       const mockId = `local_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
       const mockUrl = `https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=1200&q=80`;
       logger.info(`[Fallback Media] Simulated upload for asset: ${mockId}`);
@@ -99,6 +102,9 @@ export const deleteFromCloudinary = async (
   resourceType: 'image' | 'video' | 'raw' = 'image'
 ): Promise<boolean> => {
   if (!isCloudinaryConfigured) {
+    if (env.NODE_ENV === 'production') {
+      throw new Error('Server configuration error: Cloudinary credentials are missing in production.');
+    }
     logger.info(`[Fallback Media] Simulated deletion for asset: ${publicId}`);
     return true;
   }

@@ -1,0 +1,739 @@
+import { Request, Response, NextFunction } from 'express';
+import crypto from 'crypto';
+import { Post, IPost } from '../models/post.model.js';
+import { Category } from '../models/category.model.js';
+import { Language } from '../models/language.model.js';
+import { Like } from '../models/like.model.js';
+import { Bookmark } from '../models/bookmark.model.js';
+import { PollVote } from '../models/pollVote.model.js';
+import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
+import { logger } from '../utils/logger.js';
+
+// In-memory sliding-window view throttling: Map<token, timestamp>
+// In-memory view deduplication is intentionally best-effort for the MVP and is not globally consistent across multiple backend instances.
+const viewThrottler = new Map<string, number>();
+const VIEW_THROTTLE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const ROTATING_SALT = crypto.randomBytes(16).toString('hex');
+
+// Periodic purge of expired tokens every 5 minutes
+setInterval(() => {
+  const cutoff = Date.now() - VIEW_THROTTLE_WINDOW_MS;
+  for (const [key, timestamp] of viewThrottler.entries()) {
+    if (timestamp < cutoff) {
+      viewThrottler.delete(key);
+    }
+  }
+}, 5 * 60 * 1000);
+
+// ==========================================
+// 1. HOMEPAGE AGGREGATION
+// ==========================================
+
+export const getHomepageData = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const now = new Date();
+    const publishedQuery = { status: 'published', publishedAt: { $lte: now } };
+
+    // 1. Fetch top lead & secondary stories
+    const topStories = await Post.find(publishedQuery)
+      .sort({ publishedAt: -1 })
+      .limit(3)
+      .populate('category', 'name slug')
+      .populate('language', 'name code')
+      .populate('author', 'name avatar')
+      .select('title slug summary featuredImage category language author publishedAt postFormat readingTime views likeCount commentCount isFullWidth');
+
+    const heroStory = topStories[0] || null;
+    const secondaryFeatured = topStories.slice(1);
+
+    // 2. Latest wire dispatches (next 8)
+    const latestPosts = await Post.find(publishedQuery)
+      .sort({ publishedAt: -1 })
+      .skip(3)
+      .limit(8)
+      .populate('category', 'name slug')
+      .populate('language', 'name code')
+      .select('title slug summary featuredImage category language publishedAt postFormat views likeCount commentCount');
+
+    // 3. 7-Day Trending Window
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    let trendingPosts: any[] = await Post.find({
+      ...publishedQuery,
+      publishedAt: { $gte: sevenDaysAgo, $lte: now }
+    })
+      .sort({ views: -1, likeCount: -1, publishedAt: -1 })
+      .limit(5)
+      .populate('category', 'name slug')
+      .select('title slug summary featuredImage category publishedAt views likeCount commentCount postFormat');
+
+    // Fallback if sparse
+    if (trendingPosts.length < 3) {
+      trendingPosts = await Post.find(publishedQuery)
+        .sort({ views: -1, publishedAt: -1 })
+        .limit(5)
+        .populate('category', 'name slug')
+        .select('title slug summary featuredImage category publishedAt views likeCount commentCount postFormat');
+    }
+
+    // 4. Video Showcase
+    const featuredVideo = await Post.findOne({
+      ...publishedQuery,
+      postFormat: 'video'
+    })
+      .sort({ publishedAt: -1 })
+      .populate('category', 'name slug')
+      .select('title slug summary featuredImage videoDetails category publishedAt postFormat');
+
+    // 5. Category Showcases (Top active categories with up to 4 articles each)
+    const activeCategories = await Category.find({ parent: null }).limit(4);
+    const categorySections = await Promise.all(
+      activeCategories.map(async (cat) => {
+        const posts = await Post.find({
+          ...publishedQuery,
+          category: cat._id
+        })
+          .sort({ publishedAt: -1 })
+          .limit(4)
+          .select('title slug summary featuredImage publishedAt postFormat readingTime views likeCount');
+        return {
+          category: { _id: cat._id, name: cat.name, slug: cat.slug },
+          posts
+        };
+      })
+    );
+
+    // Filter out categories with 0 posts
+    const nonEmptySections = categorySections.filter((sec) => sec.posts.length > 0);
+
+    // 6. Breaking News wire (most recent urgent dispatch or top story)
+    const breakingPost = await Post.findOne({
+      ...publishedQuery,
+      publishedAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+    })
+      .sort({ publishedAt: -1 })
+      .select('title slug category publishedAt');
+
+    res.status(200).json({
+      success: true,
+      data: {
+        breaking: breakingPost ? { title: breakingPost.title, slug: breakingPost.slug } : null,
+        heroStory,
+        secondaryFeatured,
+        latestPosts,
+        trendingPosts,
+        featuredVideo,
+        categorySections: nonEmptySections
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ==========================================
+// 2. READER FEED & PERSONALIZATION
+// ==========================================
+
+export const getFeed = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 12, 50);
+    const skip = (page - 1) * limit;
+    const user = req.user;
+    const now = new Date();
+    const publishedQuery = { status: 'published', publishedAt: { $lte: now } };
+
+    // Guest Readers: Purely chronological latest published dispatches
+    if (!user) {
+      const [total, posts] = await Promise.all([
+        Post.countDocuments(publishedQuery),
+        Post.find(publishedQuery)
+          .sort({ publishedAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .populate('category', 'name slug')
+          .populate('language', 'name code')
+          .populate('author', 'name avatar')
+          .select('title slug summary featuredImage category language author publishedAt postFormat readingTime views likeCount commentCount')
+      ]);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          feedType: 'chronological',
+          isPersonalized: false,
+          posts,
+          pagination: { page, limit, total, pages: Math.ceil(total / limit) }
+        }
+      });
+      return;
+    }
+
+    // Authenticated Readers: Deterministic Category + Language + Recency scoring
+    const userInterests = (user.interests || []).map((id) => id.toString());
+    const userPrefLang = (user.preferredLanguage || 'en').toLowerCase().trim();
+
+    // Query candidate pool from last 14 days
+    const poolWindow = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+    let candidatePool: any[] = await Post.find({
+      ...publishedQuery,
+      publishedAt: { $gte: poolWindow, $lte: now }
+    })
+      .populate('category', 'name slug')
+      .populate('language', 'name code')
+      .populate('author', 'name avatar')
+      .select('title slug summary featuredImage category language author publishedAt postFormat readingTime views likeCount commentCount translations');
+
+    // Fallback if pool is sparse
+    if (candidatePool.length < 15) {
+      candidatePool = await Post.find(publishedQuery)
+        .sort({ publishedAt: -1 })
+        .limit(100)
+        .populate('category', 'name slug')
+        .populate('language', 'name code')
+        .populate('author', 'name avatar')
+        .select('title slug summary featuredImage category language author publishedAt postFormat readingTime views likeCount commentCount translations');
+    }
+
+    // Score candidates deterministically
+    const scoredPosts = candidatePool.map((post) => {
+      let score = 0;
+
+      // 1. Category Interest Match (+50 points)
+      const postCatId = (post.category as any)?._id?.toString() || post.category?.toString();
+      if (postCatId && userInterests.includes(postCatId)) {
+        score += 50;
+      }
+
+      // 2. Language Match (+30 points for primary or translated version)
+      const postLangCode = (post.language as any)?.code?.toLowerCase();
+      const hasTranslation = (post.translations || []).some(
+        (t: any) => t.languageCode?.toLowerCase() === userPrefLang
+      );
+
+      if (postLangCode === userPrefLang || hasTranslation) {
+        score += 30;
+      } else if (postLangCode === 'en') {
+        score += 10; // Platform default fallback
+      }
+
+      // 3. Recency Decay (+20 <= 24h, +10 <= 3d, +5 <= 7d)
+      if (post.publishedAt) {
+        const ageHours = (now.getTime() - new Date(post.publishedAt).getTime()) / (1000 * 60 * 60);
+        if (ageHours <= 24) score += 20;
+        else if (ageHours <= 72) score += 10;
+        else if (ageHours <= 168) score += 5;
+      }
+
+      return { post, score };
+    });
+
+    // Sort by Score DESC, then publishedAt DESC
+    scoredPosts.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return new Date(b.post.publishedAt || 0).getTime() - new Date(a.post.publishedAt || 0).getTime();
+    });
+
+    const total = scoredPosts.length;
+    const paginatedPosts = scoredPosts
+      .slice(skip, skip + limit)
+      .map((item) => item.post);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        feedType: 'personalized',
+        isPersonalized: true,
+        posts: paginatedPosts,
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ==========================================
+// 3. ARTICLE DISPATCH BY SLUG (With Server-Side Gating)
+// ==========================================
+
+export const getPostBySlug = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const rawSlug = req.params.slug;
+    const slug = (typeof rawSlug === 'string' ? rawSlug : '').toLowerCase().trim();
+    const now = new Date();
+
+    // 1. Locate published post by canonical slug or translation slug
+    const post = await Post.findOne({
+      $or: [{ slug }, { 'translations.slug': slug }],
+      status: 'published',
+      publishedAt: { $lte: now }
+    })
+      .populate('category', 'name slug description')
+      .populate('tags', 'name slug')
+      .populate('language', 'name code')
+      .populate('author', 'name avatar');
+
+    if (!post) {
+      res.status(404).json({ success: false, message: 'Article not found or unpublished.' });
+      return;
+    }
+
+    // 2. SERVER-SIDE GATED CONTENT PROTECTION
+    // If registeredOnly === true and user is unauthenticated, NEVER transmit article content to client!
+    const isAuthenticated = Boolean(req.user);
+    if (post.registeredOnly && !isAuthenticated) {
+      const gatedData = {
+        _id: post._id,
+        title: post.title,
+        slug: post.slug,
+        summary: post.summary,
+        featuredImage: post.featuredImage,
+        category: post.category,
+        author: post.author,
+        publishedAt: post.publishedAt,
+        postFormat: post.postFormat,
+        readingTime: (post as any).readingTime,
+        registeredOnly: true,
+        isGated: true
+      };
+      res.status(200).json({
+        success: true,
+        data: {
+          ...gatedData,
+          post: gatedData,
+          isGated: true
+        }
+      });
+      return;
+    }
+
+    // 3. Multilingual Translation Auto-Selection
+    // Check if client requested a localized version or reader prefers translation
+    const rawLang = req.query.lang;
+    const langQueryStr = typeof rawLang === 'string' ? rawLang : '';
+    const userPrefLang = (langQueryStr || req.user?.preferredLanguage || '').toLowerCase().trim();
+    let displayTitle = post.title;
+    let displaySummary = post.summary;
+    let displayContent = post.content;
+    let displaySeo = post.seo;
+    let activeLanguageCode = (post.language as any)?.code || 'en';
+
+    if (userPrefLang) {
+      const matchingTranslation = post.translations?.find(
+        (t) => t.languageCode.toLowerCase() === userPrefLang || t.slug === slug
+      );
+      if (matchingTranslation) {
+        displayTitle = matchingTranslation.title;
+        displaySummary = matchingTranslation.summary || displaySummary;
+        displayContent = matchingTranslation.content || displayContent;
+        displaySeo = matchingTranslation.seo || displaySeo;
+        activeLanguageCode = matchingTranslation.languageCode;
+      }
+    }
+
+    // 4. Reader Engagement States (if authenticated)
+    let isLikedByUser = false;
+    let isBookmarkedByUser = false;
+    let userVotedOptionId: string | null = null;
+
+    if (isAuthenticated) {
+      const [likeDoc, bookmarkDoc, voteDoc] = await Promise.all([
+        Like.findOne({ user: req.user!._id, post: post._id }),
+        Bookmark.findOne({ user: req.user!._id, post: post._id }),
+        post.postFormat === 'poll'
+          ? PollVote.findOne({ pollPost: post._id, user: req.user!._id })
+          : Promise.resolve(null)
+      ]);
+
+      isLikedByUser = Boolean(likeDoc);
+      isBookmarkedByUser = Boolean(bookmarkDoc);
+      if (voteDoc) userVotedOptionId = voteDoc.optionId;
+    }
+
+    // 5. Related Articles (same category, published, exclude current)
+    const relatedPosts = await Post.find({
+      status: 'published',
+      publishedAt: { $lte: now },
+      category: (post.category as any)?._id || post.category,
+      _id: { $ne: post._id }
+    })
+      .sort({ publishedAt: -1 })
+      .limit(3)
+      .populate('category', 'name slug')
+      .select('title slug summary featuredImage publishedAt postFormat');
+
+    // 6. Available Translations Manifest
+    const availableTranslations = (post.translations || []).map((t) => ({
+      languageCode: t.languageCode,
+      title: t.title,
+      slug: t.slug
+    }));
+
+    const postData = {
+      _id: post._id,
+      title: displayTitle,
+      slug: post.slug,
+      summary: displaySummary,
+      content: displayContent,
+      author: post.author,
+      category: post.category,
+      tags: post.tags,
+      language: post.language,
+      activeLanguageCode,
+      availableTranslations,
+      postFormat: post.postFormat,
+      featuredImage: post.featuredImage,
+      images: post.images,
+      publishedAt: post.publishedAt,
+      isFullWidth: post.isFullWidth,
+      registeredOnly: post.registeredOnly,
+      isGated: false,
+      externalUrl: post.externalUrl,
+      seo: displaySeo,
+      faq: post.faq,
+      galleryItems: post.galleryItems,
+      sortedListItems: post.sortedListItems,
+      videoDetails: post.videoDetails,
+      audioDetails: post.audioDetails,
+      pollDetails: post.pollDetails,
+      eventDetails: post.eventDetails,
+      views: post.views || 0,
+      likeCount: post.likeCount || 0,
+      commentCount: post.commentCount || 0,
+      isLikedByUser,
+      isBookmarkedByUser,
+      userVotedOptionId
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        ...postData,
+        post: postData,
+        isGated: false,
+        relatedPosts
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ==========================================
+// 4. VIEW COUNTING (Throttled & Non-PII)
+// ==========================================
+
+export const recordView = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const postId = req.params.id;
+
+    // Create an anonymous hashed token without storing raw IP address
+    const clientSignature = `${req.headers['user-agent'] || ''}:${req.headers['accept-language'] || ''}:${postId}:${ROTATING_SALT}`;
+    const token = crypto.createHash('sha256').update(clientSignature).digest('hex');
+
+    const lastSeen = viewThrottler.get(token);
+    const now = Date.now();
+
+    // Throttled: limit 1 increment per 10 minutes per client token
+    if (lastSeen && now - lastSeen < VIEW_THROTTLE_WINDOW_MS) {
+      res.status(200).json({ success: true, message: 'View throttled.', counted: false });
+      return;
+    }
+
+    viewThrottler.set(token, now);
+
+    // Atomically increment view count on published post
+    const updatedPost = await Post.findOneAndUpdate(
+      { _id: postId, status: 'published' },
+      { $inc: { views: 1 } },
+      { new: true, select: 'views' }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'View counted.',
+      counted: true,
+      views: updatedPost?.views ?? 1
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ==========================================
+// 5. 7-DAY TRENDING DISPATCHES
+// ==========================================
+
+export const getTrendingPosts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 10, 30);
+    const now = new Date();
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const publishedQuery = {
+      status: 'published',
+      publishedAt: { $gte: sevenDaysAgo, $lte: now }
+    };
+
+    // Retrieve pool of posts from last 7 days
+    let pool: any[] = await Post.find(publishedQuery)
+      .populate('category', 'name slug')
+      .populate('language', 'name code')
+      .select('title slug summary featuredImage category language publishedAt postFormat views likeCount commentCount');
+
+    // Fallback to recent published posts if fewer than 5 exist in the 7-day window
+    if (pool.length < 5) {
+      pool = await Post.find({ status: 'published', publishedAt: { $lte: now } })
+        .sort({ publishedAt: -1 })
+        .limit(20)
+        .populate('category', 'name slug')
+        .populate('language', 'name code')
+        .select('title slug summary featuredImage category language publishedAt postFormat views likeCount commentCount');
+    }
+
+    // Rank via formula: (views * 1.0) + (likeCount * 3.0) + (commentCount * 5.0) + recencyBoost
+    const scoredTrending = pool.map((post) => {
+      const views = post.views || 0;
+      const likes = post.likeCount || 0;
+      const comments = post.commentCount || 0;
+
+      let recencyBoost = 0;
+      if (post.publishedAt) {
+        const ageHours = (now.getTime() - new Date(post.publishedAt).getTime()) / (1000 * 60 * 60);
+        if (ageHours <= 24) recencyBoost = 40;
+        else if (ageHours <= 48) recencyBoost = 20;
+        else if (ageHours <= 168) recencyBoost = 5;
+      }
+
+      const score = views * 1.0 + likes * 3.0 + comments * 5.0 + recencyBoost;
+      return { post, score };
+    });
+
+    scoredTrending.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return new Date(b.post.publishedAt || 0).getTime() - new Date(a.post.publishedAt || 0).getTime();
+    });
+
+    const posts = scoredTrending.slice(0, limit).map((item) => item.post);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        window: '7-days',
+        posts
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ==========================================
+// 6. CATEGORY ARCHIVES (Supports nested)
+// ==========================================
+
+export const getCategoryPosts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const rawSlug = req.params.slug;
+    const slug = (typeof rawSlug === 'string' ? rawSlug : '').toLowerCase().trim();
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 12, 50);
+    const skip = (page - 1) * limit;
+
+    const category = await Category.findOne({ slug });
+    if (!category) {
+      res.status(404).json({ success: false, message: 'Category not found.' });
+      return;
+    }
+
+    // Find any children (e.g. subcategories under Regional)
+    const childCategories = await Category.find({ parent: category._id });
+    const categoryIds = [category._id, ...childCategories.map((c) => c._id)];
+
+    const now = new Date();
+    const query = {
+      status: 'published',
+      publishedAt: { $lte: now },
+      category: { $in: categoryIds }
+    };
+
+    const [total, posts] = await Promise.all([
+      Post.countDocuments(query),
+      Post.find(query)
+        .sort({ publishedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('category', 'name slug')
+        .populate('language', 'name code')
+        .populate('author', 'name avatar')
+        .select('title slug summary featuredImage category language author publishedAt postFormat readingTime views likeCount commentCount')
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        category: {
+          _id: category._id,
+          name: category.name,
+          slug: category.slug,
+          description: category.description
+        },
+        posts,
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ==========================================
+// 7. LATEST CHRONOLOGICAL WIRE
+// ==========================================
+
+export const getLatestPosts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 12, 50);
+    const skip = (page - 1) * limit;
+    const { category, language } = req.query;
+
+    const now = new Date();
+    const query: any = { status: 'published', publishedAt: { $lte: now } };
+
+    if (category && typeof category === 'string') {
+      const cat = await Category.findOne({ slug: category.toLowerCase() });
+      if (cat) query.category = cat._id;
+    }
+
+    if (language && typeof language === 'string') {
+      const lang = await Language.findOne({ code: language.toLowerCase() });
+      if (lang) query.language = lang._id;
+    }
+
+    const [total, posts] = await Promise.all([
+      Post.countDocuments(query),
+      Post.find(query)
+        .sort({ publishedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('category', 'name slug')
+        .populate('language', 'name code')
+        .populate('author', 'name avatar')
+        .select('title slug summary featuredImage category language author publishedAt postFormat readingTime views likeCount commentCount')
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        posts,
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ==========================================
+// 8. VIDEO REPORTS
+// ==========================================
+
+export const getVideoPosts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 12, 30);
+    const skip = (page - 1) * limit;
+
+    const now = new Date();
+    const query = {
+      status: 'published',
+      publishedAt: { $lte: now },
+      postFormat: 'video'
+    };
+
+    const [total, posts] = await Promise.all([
+      Post.countDocuments(query),
+      Post.find(query)
+        .sort({ publishedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('category', 'name slug')
+        .select('title slug summary featuredImage videoDetails category publishedAt postFormat views likeCount')
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        posts,
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ==========================================
+// 9. PUBLIC SEARCH (Text-Indexed & Query-Bounded)
+// ==========================================
+
+export const searchPosts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const rawQuery = (req.query.q as string || '').trim();
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 12, 50);
+    const skip = (page - 1) * limit;
+
+    // Bound query to prevent expensive regex/DoS
+    const searchQuery = rawQuery.substring(0, 100);
+
+    if (!searchQuery) {
+      res.status(200).json({
+        success: true,
+        data: {
+          posts: [],
+          query: '',
+          pagination: { page, limit, total: 0, pages: 0 }
+        }
+      });
+      return;
+    }
+
+    const now = new Date();
+    const baseQuery: any = {
+      status: 'published',
+      publishedAt: { $lte: now },
+      $text: { $search: searchQuery }
+    };
+
+    if (req.query.category) {
+      const cat = await Category.findOne({ slug: (req.query.category as string).toLowerCase() });
+      if (cat) baseQuery.category = cat._id;
+    }
+
+    const [total, posts] = await Promise.all([
+      Post.countDocuments(baseQuery),
+      Post.find(baseQuery, { score: { $meta: 'textScore' } })
+        .sort({ score: { $meta: 'textScore' }, publishedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('category', 'name slug')
+        .populate('language', 'name code')
+        .populate('author', 'name avatar')
+        .select('title slug summary featuredImage category language author publishedAt postFormat readingTime views likeCount commentCount')
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        posts,
+        query: searchQuery,
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};

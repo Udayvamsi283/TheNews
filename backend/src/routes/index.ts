@@ -7,6 +7,8 @@ import tagRoutes from './tag.routes.js';
 import languageRoutes from './language.routes.js';
 import postRoutes from './post.routes.js';
 import mediaRoutes from './media.routes.js';
+import publicRoutes from './public.routes.js';
+import engagementRoutes from './engagement.routes.js';
 
 const apiRouter = Router();
 
@@ -24,16 +26,9 @@ apiRouter.use('/languages', languageRoutes);
 apiRouter.use('/posts', postRoutes);
 apiRouter.use('/media', mediaRoutes);
 
-/*
- * Future Module Route Registration (Phase 3+):
- *
- * apiRouter.use('/articles', articleRoutes);
- * apiRouter.use('/media', mediaRoutes);
- * apiRouter.use('/comments', commentRoutes);
- * apiRouter.use('/polls', pollRoutes);
- * apiRouter.use('/events', eventRoutes);
- * apiRouter.use('/homepage', homepageRoutes);
- * apiRouter.use('/analytics', analyticsRoutes);
- */
+// Phase 4 Modules: Public Portal & Reader Engagement
+apiRouter.use('/public', publicRoutes);
+apiRouter.use('/engagement', engagementRoutes);
+apiRouter.use('/', engagementRoutes);
 
 export default apiRouter;

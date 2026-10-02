@@ -3,11 +3,13 @@ import {
   getProfile,
   updateProfile,
   changePassword,
+  updatePreferences,
   listUsers,
   getUserById,
   updateUser,
   deleteUser
 } from '../controllers/user.controller.js';
+import { getUserBookmarks } from '../controllers/engagement.controller.js';
 import { authenticate, requireRole } from '../middleware/auth.middleware.js';
 
 const router = Router();
@@ -15,6 +17,8 @@ const router = Router();
 // Authenticated current user routes
 router.get('/me', authenticate, getProfile);
 router.patch('/me', authenticate, updateProfile);
+router.patch('/me/preferences', authenticate, updatePreferences);
+router.get('/me/bookmarks', authenticate, getUserBookmarks);
 router.post('/me/change-password', authenticate, changePassword);
 
 // Admin-only user management routes

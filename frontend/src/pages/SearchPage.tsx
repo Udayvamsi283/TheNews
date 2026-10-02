@@ -1,18 +1,26 @@
-import React, { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { MOCK_ARTICLES, MOCK_CATEGORIES } from '../services/mockData';
-import { NewsCard } from '../components/common/NewsCard';
-import { Input } from '../components/ui/Input';
-import { Button } from '../components/ui/Button';
-import { EmptyState } from '../components/ui/EmptyState';
-import { Search as SearchIcon, X, SlidersHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '../services/apiClient';
+import { Search as SearchIcon, X, Clock, Lock, ArrowRight } from 'lucide-react';
 
 export const SearchPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialQuery = searchParams.get('q') || '';
-  const [query, setQuery] = useState(initialQuery);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'relevance' | 'date'>('relevance');
+  const queryParam = searchParams.get('q') || '';
+  const [query, setQuery] = useState(queryParam);
+  const [page, setPage] = useState(1);
+
+  // Sync state if URL query param changes
+  useEffect(() => {
+    setQuery(queryParam);
+    setPage(1);
+  }, [queryParam]);
+
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['public', 'search', queryParam, page],
+    queryFn: () => apiClient.searchPosts(queryParam, { page, limit: 12 }),
+    enabled: queryParam.trim().length > 0
+  });
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,152 +31,177 @@ export const SearchPage: React.FC = () => {
     }
   };
 
-  // Filter mock articles based on query & category
-  const filteredResults = MOCK_ARTICLES.filter((article) => {
-    const matchesQuery =
-      !query.trim() ||
-      article.title.toLowerCase().includes(query.toLowerCase()) ||
-      article.summary.toLowerCase().includes(query.toLowerCase()) ||
-      article.tags.some((t) => t.toLowerCase().includes(query.toLowerCase()));
+  const handleClear = () => {
+    setQuery('');
+    setSearchParams({});
+  };
 
-    const matchesCategory =
-      selectedCategory === 'all' || article.categorySlug === selectedCategory;
-
-    return matchesQuery && matchesCategory;
-  });
+  const posts = data?.posts || [];
+  const pagination = data?.pagination;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      {/* Header & Search Bar Form */}
-      <div className="bg-white dark:bg-navy-850 p-6 sm:p-8 rounded border border-slate-200 dark:border-navy-700 shadow-sm space-y-5">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      {/* Header and Search Box */}
+      <div className="bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
-            Editorial Archive Search
+          <h1 className="text-2xl sm:text-3xl font-black font-serif text-gray-950 dark:text-white">
+            Archive Search
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Search our complete digital archives, investigative dossiers, and public dispatches.
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Search our global journalism, breaking dispatches, investigations, and multimedia archive.
           </p>
         </div>
 
         <form onSubmit={handleSearchSubmit} className="flex gap-2">
-          <div className="flex-1 relative">
-            <Input
+          <div className="relative flex-1">
+            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by keywords, author, topic, or sovereign region..."
-              leftIcon={<SearchIcon className="w-4 h-4" />}
-              rightIcon={
-                query ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setQuery('');
-                      setSearchParams({});
-                    }}
-                    className="hover:text-slate-700 dark:hover:text-slate-200"
-                    aria-label="Clear query"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                ) : undefined
-              }
+              placeholder="Search by keywords, headlines, topics, or names..."
+              className="w-full pl-11 pr-10 py-3 rounded-2xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm font-medium text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
-          </div>
-          <Button type="submit" size="md">
-            Search
-          </Button>
-        </form>
-
-        {/* Filter Pills */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-100 dark:border-navy-750 text-xs">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-slate-400 font-semibold mr-1 flex items-center gap-1">
-              <SlidersHorizontal className="w-3 h-3" /> Filter:
-            </span>
-            <button
-              onClick={() => setSelectedCategory('all')}
-              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                selectedCategory === 'all'
-                  ? 'bg-navy-900 text-white dark:bg-white dark:text-navy-950 font-bold'
-                  : 'bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-              }`}
-            >
-              All Desks
-            </button>
-            {MOCK_CATEGORIES.slice(0, 5).map((cat) => (
+            {query && (
               <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.slug)}
-                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                  selectedCategory === cat.slug
-                    ? 'bg-navy-900 text-white dark:bg-white dark:text-navy-950 font-bold'
-                    : 'bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-                }`}
+                type="button"
+                onClick={handleClear}
+                aria-label="Clear search query"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
               >
-                {cat.name}
+                <X className="w-4 h-4" />
               </button>
-            ))}
+            )}
           </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-slate-400">Sort by:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-transparent text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none cursor-pointer"
-            >
-              <option value="relevance">Relevance</option>
-              <option value="date">Most Recent</option>
-            </select>
-          </div>
-        </div>
+          <button
+            type="submit"
+            className="px-6 py-3 rounded-2xl font-bold text-sm text-white bg-primary-600 hover:bg-primary-700 shadow-sm transition-all"
+          >
+            Search
+          </button>
+        </form>
       </div>
 
       {/* Results Section */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1">
-          <div>
-            Showing <strong className="text-slate-900 dark:text-white">{filteredResults.length}</strong> matching dispatches
-            {query && (
-              <>
-                {' '}
-                for <span className="italic font-serif text-slate-800 dark:text-slate-200">"{query}"</span>
-              </>
-            )}
-          </div>
-          <div className="font-mono text-[11px]">Phase 1 Search Prototype</div>
+      {queryParam.trim().length === 0 ? (
+        <div className="py-16 text-center text-gray-400 font-medium">
+          Enter search terms above to explore the news archive.
         </div>
-
-        {filteredResults.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredResults.map((article) => (
-              <NewsCard key={article.id} article={article} />
-            ))}
+      ) : isLoading || isFetching ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="animate-pulse h-28 bg-gray-100 dark:bg-gray-900 rounded-2xl" />
+          ))}
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="py-16 text-center">
+          <h2 className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-1">
+            No matching dispatches found
+          </h2>
+          <p className="text-xs text-gray-400">
+            Try refining your keywords or checking for spelling errors.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="text-xs text-gray-400 font-medium">
+            Found {pagination?.total || posts.length} dispatches matching &quot;{queryParam}&quot;
           </div>
-        ) : (
-          <EmptyState
-            title="No matching dispatches found"
-            description="We couldn't locate any stories matching your exact keywords. Try broader terminology, checking desk categories, or inspecting spelling."
-            actionLabel="Reset Search Filter"
-            onAction={() => {
-              setQuery('');
-              setSelectedCategory('all');
-              setSearchParams({});
-            }}
-          />
-        )}
-      </div>
 
-      {/* Pagination UI Foundation */}
-      {filteredResults.length > 0 && (
-        <div className="pt-6 border-t border-slate-200 dark:border-navy-700 flex items-center justify-between">
-          <Button variant="outline" size="sm" disabled leftIcon={<ChevronLeft className="w-4 h-4" />}>
-            Previous
-          </Button>
-          <span className="text-xs text-slate-500 font-mono">Page 1 of 1</span>
-          <Button variant="outline" size="sm" disabled rightIcon={<ChevronRight className="w-4 h-4" />}>
-            Next
-          </Button>
+          <div className="space-y-4">
+            {posts.map((post) => {
+              const imageUrl =
+                post.featuredImage?.url ||
+                post.images?.[0]?.url ||
+                'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=400&q=80';
+
+              const publishedDate = post.publishedAt
+                ? new Date(post.publishedAt).toLocaleDateString([], {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                  })
+                : '';
+
+              return (
+                <article
+                  key={post._id}
+                  className="group flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-md transition-all"
+                >
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800 relative">
+                      <img
+                        src={imageUrl}
+                        alt={post.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                      {post.registeredOnly && (
+                        <div className="absolute top-1 left-1 p-0.5 rounded bg-gray-900/80 text-amber-300">
+                          <Lock className="w-2.5 h-2.5" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0 space-y-1">
+                      {post.category && (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-primary-600 dark:text-primary-400">
+                          {post.category.name}
+                        </span>
+                      )}
+                      <h2 className="text-base sm:text-lg font-bold font-serif text-gray-950 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2">
+                        <Link to={`/article/${post.slug}`}>{post.title}</Link>
+                      </h2>
+                      {post.summary && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
+                          {post.summary}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-3 text-xs text-gray-400 pt-1">
+                        <span>{post.author?.name || 'Staff Reporter'}</span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> {publishedDate}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Link
+                    to={`/article/${post.slug}`}
+                    className="self-end sm:self-center inline-flex items-center gap-1 text-xs font-bold text-primary-600 hover:text-primary-700 transition-colors"
+                  >
+                    <span>Read</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </article>
+              );
+            })}
+          </div>
+
+          {/* Pagination */}
+          {pagination && typeof pagination.pages === 'number' && pagination.pages > 1 && (
+            <div className="pt-8 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 disabled:opacity-40 transition-colors"
+              >
+                Previous
+              </button>
+              <span className="text-xs text-gray-500 font-medium">
+                Page {page} of {pagination.pages}
+              </span>
+              <button
+                type="button"
+                disabled={page >= (pagination.pages || 1)}
+                onClick={() => setPage((p) => Math.min(pagination.pages || 1, p + 1))}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 disabled:opacity-40 transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

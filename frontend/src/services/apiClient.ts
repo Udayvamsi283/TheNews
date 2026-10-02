@@ -8,7 +8,10 @@ import {
   Language,
   Pagination,
   Post,
-  MediaAsset
+  MediaAsset,
+  Comment,
+  HomepageData,
+  PollVoteResult
 } from '../types';
 
 export class ApiError extends Error {
@@ -466,6 +469,234 @@ class ApiClient {
       body
     });
     return res;
+  }
+
+  // ==========================================
+  // PHASE 4 PUBLIC DISCOVERY & ENGAGEMENT API
+  // ==========================================
+
+  public async getHomepageData(): Promise<HomepageData> {
+    const res = await this.request<{ success: boolean; data: HomepageData }>('/public/home');
+    return res.data;
+  }
+
+  public async getFeed(params?: {
+    language?: string;
+    category?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ posts: Post[]; pagination: Pagination; isPersonalized: boolean }> {
+    const query = new URLSearchParams();
+    if (params?.language) query.set('language', params.language);
+    if (params?.category) query.set('category', params.category);
+    if (params?.page) query.set('page', params.page.toString());
+    if (params?.limit) query.set('limit', params.limit.toString());
+    const res = await this.request<{
+      success: boolean;
+      data: { posts: Post[]; pagination: Pagination; isPersonalized: boolean };
+    }>(`/public/feed${query.toString() ? `?${query.toString()}` : ''}`);
+    return res.data;
+  }
+
+  public async getPublicPosts(params?: {
+    language?: string;
+    category?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ posts: Post[]; pagination: Pagination }> {
+    const query = new URLSearchParams();
+    if (params?.language) query.set('language', params.language);
+    if (params?.category) query.set('category', params.category);
+    if (params?.page) query.set('page', params.page.toString());
+    if (params?.limit) query.set('limit', params.limit.toString());
+    const res = await this.request<{
+      success: boolean;
+      data: { posts: Post[]; pagination: Pagination };
+    }>(`/public/posts${query.toString() ? `?${query.toString()}` : ''}`);
+    return res.data;
+  }
+
+  public async getPostBySlug(slug: string, lang?: string): Promise<{ post: Post; isGated?: boolean }> {
+    const url = `/public/posts/${slug}${lang ? `?lang=${encodeURIComponent(lang)}` : ''}`;
+    const res = await this.request<{
+      success: boolean;
+      data: { post: Post; isGated?: boolean };
+    }>(url);
+    return res.data;
+  }
+
+  public async recordView(id: string): Promise<void> {
+    try {
+      await this.request(`/public/posts/${id}/view`, { method: 'POST' });
+    } catch {
+      // Best-effort in-memory view count; ignore silent errors
+    }
+  }
+
+  public async getCategoryPosts(
+    slug: string,
+    params?: { page?: number; limit?: number }
+  ): Promise<{ category: Category; posts: Post[]; pagination: Pagination }> {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', params.page.toString());
+    if (params?.limit) query.set('limit', params.limit.toString());
+    const res = await this.request<{
+      success: boolean;
+      data: { category: Category; posts: Post[]; pagination: Pagination };
+    }>(`/public/categories/${slug}/posts${query.toString() ? `?${query.toString()}` : ''}`);
+    return res.data;
+  }
+
+  public async getLatestPosts(params?: {
+    page?: number;
+    limit?: number;
+  }): Promise<{ posts: Post[]; pagination: Pagination }> {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', params.page.toString());
+    if (params?.limit) query.set('limit', params.limit.toString());
+    const res = await this.request<{
+      success: boolean;
+      data: { posts: Post[]; pagination: Pagination };
+    }>(`/public/latest${query.toString() ? `?${query.toString()}` : ''}`);
+    return res.data;
+  }
+
+  public async getTrendingPosts(params?: { limit?: number }): Promise<Post[]> {
+    const query = new URLSearchParams();
+    if (params?.limit) query.set('limit', params.limit.toString());
+    const res = await this.request<{ success: boolean; data: Post[] }>(
+      `/public/trending${query.toString() ? `?${query.toString()}` : ''}`
+    );
+    return res.data;
+  }
+
+  public async getVideoPosts(params?: {
+    page?: number;
+    limit?: number;
+  }): Promise<{ posts: Post[]; pagination: Pagination }> {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', params.page.toString());
+    if (params?.limit) query.set('limit', params.limit.toString());
+    const res = await this.request<{
+      success: boolean;
+      data: { posts: Post[]; pagination: Pagination };
+    }>(`/public/videos${query.toString() ? `?${query.toString()}` : ''}`);
+    return res.data;
+  }
+
+  public async searchPosts(
+    searchQuery: string,
+    params?: { page?: number; limit?: number }
+  ): Promise<{ posts: Post[]; pagination: Pagination; query: string }> {
+    const query = new URLSearchParams();
+    query.set('q', searchQuery);
+    if (params?.page) query.set('page', params.page.toString());
+    if (params?.limit) query.set('limit', params.limit.toString());
+    const res = await this.request<{
+      success: boolean;
+      data: { posts: Post[]; pagination: Pagination; query: string };
+    }>(`/public/search?${query.toString()}`);
+    return res.data;
+  }
+
+  public async likePost(id: string): Promise<{ likeCount: number }> {
+    const res = await this.request<{ success: boolean; data: { likeCount: number } }>(
+      `/engagement/posts/${id}/like`,
+      { method: 'POST' }
+    );
+    return res.data;
+  }
+
+  public async unlikePost(id: string): Promise<{ likeCount: number }> {
+    const res = await this.request<{ success: boolean; data: { likeCount: number } }>(
+      `/engagement/posts/${id}/like`,
+      { method: 'DELETE' }
+    );
+    return res.data;
+  }
+
+  public async bookmarkPost(id: string): Promise<void> {
+    await this.request(`/engagement/posts/${id}/bookmark`, { method: 'POST' });
+  }
+
+  public async removeBookmark(id: string): Promise<void> {
+    await this.request(`/engagement/posts/${id}/bookmark`, { method: 'DELETE' });
+  }
+
+  public async getUserBookmarks(params?: {
+    page?: number;
+    limit?: number;
+  }): Promise<{ bookmarks: Post[]; pagination: Pagination }> {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', params.page.toString());
+    if (params?.limit) query.set('limit', params.limit.toString());
+    const res = await this.request<{
+      success: boolean;
+      data: { bookmarks: Post[]; pagination: Pagination };
+    }>(`/users/me/bookmarks${query.toString() ? `?${query.toString()}` : ''}`);
+    return res.data;
+  }
+
+  public async getComments(
+    postId: string,
+    params?: { page?: number; limit?: number }
+  ): Promise<{ comments: Comment[]; pagination: Pagination }> {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', params.page.toString());
+    if (params?.limit) query.set('limit', params.limit.toString());
+    const res = await this.request<{
+      success: boolean;
+      data: { comments: Comment[]; pagination: Pagination };
+    }>(`/engagement/posts/${postId}/comments${query.toString() ? `?${query.toString()}` : ''}`);
+    return res.data;
+  }
+
+  public async createComment(postId: string, content: string): Promise<{ comment: Comment; commentCount: number }> {
+    const res = await this.request<{
+      success: boolean;
+      data: { comment: Comment; commentCount: number };
+    }>(`/engagement/posts/${postId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ content })
+    });
+    return res.data;
+  }
+
+  public async deleteComment(id: string): Promise<void> {
+    await this.request(`/engagement/comments/${id}`, { method: 'DELETE' });
+  }
+
+  public async votePoll(postId: string, optionId: string): Promise<PollVoteResult> {
+    const res = await this.request<{
+      success: boolean;
+      data: PollVoteResult;
+    }>(`/engagement/posts/${postId}/poll/vote`, {
+      method: 'POST',
+      body: JSON.stringify({ optionId })
+    });
+    return res.data;
+  }
+
+  public async getPollResults(postId: string): Promise<PollVoteResult> {
+    const res = await this.request<{
+      success: boolean;
+      data: PollVoteResult;
+    }>(`/engagement/posts/${postId}/poll/results`);
+    return res.data;
+  }
+
+  public async updatePreferences(data: {
+    preferredLanguage?: string;
+    interests?: string[];
+  }): Promise<{ user: User }> {
+    const res = await this.request<{
+      success: boolean;
+      data: { user: User };
+    }>('/users/me/preferences', {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    });
+    return res.data;
   }
 }
 

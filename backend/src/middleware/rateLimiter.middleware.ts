@@ -10,3 +10,25 @@ export const apiRateLimiter = rateLimit({
     message: 'Too many requests from this IP, please try again after 15 minutes.'
   }
 });
+
+export const commentRateLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: process.env.NODE_ENV === 'test' ? 100 : 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many comments submitted in a short time. Please wait a few minutes before posting again.'
+  }
+});
+
+export const voteRateLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: process.env.NODE_ENV === 'test' ? 100 : 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many poll votes submitted. Please wait a few minutes.'
+  }
+});

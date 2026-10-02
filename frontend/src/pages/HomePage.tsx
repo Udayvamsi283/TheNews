@@ -1,136 +1,268 @@
 import React, { useState } from 'react';
-import { MOCK_ARTICLES } from '../services/mockData';
-import { FeaturedNewsCard } from '../components/common/FeaturedNewsCard';
-import { NewsCard } from '../components/common/NewsCard';
-import { CompactNewsCard } from '../components/common/CompactNewsCard';
-import { SectionHeader } from '../components/common/SectionHeader';
-import { Tabs } from '../components/ui/Tabs';
-import { TrendingUp, Sparkles } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { apiClient } from '../services/apiClient';
+import { BreakingNewsBar } from '../components/public/BreakingNewsBar';
+import { HeroStory } from '../components/public/HeroStory';
+import { CategorySection } from '../components/public/CategorySection';
+import { Flame, Clock, Radio, ArrowRight, Lock } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
-  const [activeFeedTab, setActiveFeedTab] = useState('all');
+  const [feedFilter, setFeedFilter] = useState<'for-you' | 'all'>('for-you');
 
-  const leadStory = MOCK_ARTICLES[0];
-  const secondaryFeatured = MOCK_ARTICLES.slice(1, 3);
-  const latestNews = MOCK_ARTICLES.slice(1);
-  const popularArticles = [...MOCK_ARTICLES].sort((a, b) => b.viewCount - a.viewCount).slice(0, 5);
+  // Fetch Homepage structured layout
+  const { data: homeData, isLoading: homeLoading } = useQuery({
+    queryKey: ['public', 'home'],
+    queryFn: () => apiClient.getHomepageData()
+  });
 
-  const feedTabs = [
-    { id: 'all', label: 'All Dispatches' },
-    { id: 'international', label: 'International' },
-    { id: 'technology', label: 'Technology' },
-    { id: 'business', label: 'Business' }
-  ];
+  // Fetch Personalized or Chronological Feed
+  const { data: feedData, isLoading: feedLoading } = useQuery({
+    queryKey: ['public', 'feed', feedFilter],
+    queryFn: () => apiClient.getFeed({ limit: 8 })
+  });
 
-  const filteredFeed =
-    activeFeedTab === 'all'
-      ? latestNews
-      : latestNews.filter((a) => a.categorySlug === activeFeedTab);
+  // Fetch Trending stories (7-day window)
+  const { data: trendingPosts = [] } = useQuery({
+    queryKey: ['public', 'trending'],
+    queryFn: () => apiClient.getTrendingPosts({ limit: 5 })
+  });
+
+  if (homeLoading && !homeData) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8 animate-pulse">
+        <div className="h-96 bg-gray-200 dark:bg-gray-800 rounded-3xl" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-64 bg-gray-200 dark:bg-gray-800 rounded-2xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const heroStory = homeData?.heroStory;
+  const breakingNews = homeData?.breakingNews || [];
+  const featuredArticles = homeData?.featuredArticles || [];
+  const categorySections = homeData?.categorySections || [];
+  const feedPosts = feedData?.posts || [];
 
   return (
-    <div className="space-y-12">
-      {/* 1. TOP HERO SECTION */}
-      <section aria-labelledby="featured-dispatch">
-        <h2 id="featured-dispatch" className="sr-only">Top Featured Dispatch</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Main Hero Card (8 Cols) */}
-          <div className="lg:col-span-8">
-            <FeaturedNewsCard article={leadStory} />
-          </div>
+    <div className="space-y-12 pb-16">
+      {/* 1. Breaking News Alert Bar */}
+      {breakingNews.length > 0 && <BreakingNewsBar breakingPosts={breakingNews} />}
 
-          {/* Secondary Hero Stack (4 Cols) */}
-          <div className="lg:col-span-4 flex flex-col gap-6">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-900 dark:border-white">
-              <span className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-editorial-red" />
-                Featured Analysis
-              </span>
-            </div>
-            {secondaryFeatured.map((article) => (
-              <NewsCard key={article.id} article={article} />
-            ))}
-          </div>
-        </div>
-      </section>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+        {/* 2. Lead Hero Story */}
+        {heroStory && (
+          <section aria-label="Lead Story">
+            <HeroStory post={heroStory} />
+          </section>
+        )}
 
-      {/* 2. LATEST NEWS FEED & SIDEBAR SECTION */}
-      <section aria-labelledby="latest-news-section">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Left Column: Categorized News Feed (8 Cols) */}
+        {/* 3. Secondary Featured Grid & Trending Sidebar */}
+        <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Main Column (8 Cols): Featured Dispatches */}
           <div className="lg:col-span-8 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between border-b border-slate-200 dark:border-navy-700 pb-2 gap-4">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-4 bg-editorial-red inline-block" />
-                <h2 id="latest-news-section" className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
-                  Continuous Wire
-                </h2>
-              </div>
-              <Tabs
-                tabs={feedTabs}
-                activeTab={activeFeedTab}
-                onChange={setActiveFeedTab}
-                className="border-none"
-              />
+            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-3">
+              <h3 className="text-xl font-bold font-serif text-gray-900 dark:text-white">
+                Featured Journalism
+              </h3>
+              <Link
+                to="/latest"
+                className="text-xs font-bold uppercase tracking-wider text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
+              >
+                <span>Latest Wire</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {filteredFeed.map((article) => (
-                <NewsCard key={article.id} article={article} />
+              {featuredArticles.map((post) => {
+                const imageUrl =
+                  post.featuredImage?.url ||
+                  post.images?.[0]?.url ||
+                  'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=600&q=80';
+
+                return (
+                  <article
+                    key={post._id}
+                    className="group flex flex-col justify-between rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden hover:shadow-md transition-all"
+                  >
+                    <div>
+                      <div className="relative aspect-[16/10] overflow-hidden bg-gray-100 dark:bg-gray-800">
+                        <img
+                          src={imageUrl}
+                          alt={post.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          loading="lazy"
+                        />
+                        {post.registeredOnly && (
+                          <div className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-900/80 backdrop-blur text-amber-300">
+                            <Lock className="w-3 h-3" /> Exclusive
+                          </div>
+                        )}
+                        {post.category && (
+                          <span className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-black/75 backdrop-blur text-white">
+                            {post.category.name}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="p-4 sm:p-5">
+                        <h4 className="text-base sm:text-lg font-bold font-serif text-gray-900 dark:text-white leading-snug group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2">
+                          <Link to={`/article/${post.slug}`}>{post.title}</Link>
+                        </h4>
+
+                        {post.summary && (
+                          <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">
+                            {post.summary}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="px-5 pb-4 pt-0 text-xs text-gray-400 flex items-center justify-between border-t border-gray-50 dark:border-gray-800/40">
+                      <span>{post.author?.name || 'Staff Reporter'}</span>
+                      {post.publishedAt && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {new Date(post.publishedAt).toLocaleDateString([], {
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Sidebar Column (4 Cols): Top Trending (7 Days) */}
+          <div className="lg:col-span-4 rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/70 p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                <Flame className="w-4 h-4" />
+                <span>Trending This Week</span>
+              </div>
+              <Link
+                to="/trending"
+                className="text-xs font-medium text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              >
+                Top 10 →
+              </Link>
+            </div>
+
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              {trendingPosts.map((post, idx) => (
+                <div key={post._id} className="py-3 flex items-baseline gap-3 group">
+                  <span className="text-xl font-bold font-serif text-gray-300 dark:text-gray-700 group-hover:text-amber-500 transition-colors w-6 flex-shrink-0">
+                    {idx + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <h5 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2">
+                      <Link to={`/article/${post.slug}`}>{post.title}</Link>
+                    </h5>
+                    {post.category && (
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-semibold">
+                        {post.category.name}
+                      </span>
+                    )}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
+        </section>
 
-          {/* Right Column: Trending / Most Read Sidebar (4 Cols) */}
-          <div className="lg:col-span-4 space-y-8">
-            {/* Trending dispatches */}
-            <div className="bg-white dark:bg-navy-850 rounded border border-slate-200 dark:border-navy-700 p-5">
-              <div className="flex items-center gap-2 border-b border-slate-100 dark:border-navy-750 pb-3 mb-2">
-                <TrendingUp className="w-4 h-4 text-editorial-red" />
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
-                  Most Read This Week
-                </h3>
-              </div>
+        {/* 4. Category-Curated Sections */}
+        {categorySections.map((sec) => (
+          <CategorySection key={sec.category._id} category={sec.category} posts={sec.posts} />
+        ))}
 
-              <div className="divide-y divide-slate-100 dark:divide-navy-750">
-                {popularArticles.map((article, idx) => (
-                  <CompactNewsCard
-                    key={article.id}
-                    article={article}
-                    rank={idx + 1}
-                  />
-                ))}
-              </div>
+        {/* 5. Continuous Stream & Personalized Feed */}
+        <section className="pt-8 border-t border-gray-200 dark:border-gray-800">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Radio className="w-5 h-5 text-primary-600" />
+              <h3 className="text-2xl font-bold font-serif text-gray-900 dark:text-white">
+                The Dispatches Stream
+              </h3>
+            </div>
+
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setFeedFilter('for-you')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  feedFilter === 'for-you'
+                    ? 'bg-white dark:bg-gray-900 text-primary-600 dark:text-primary-400 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400'
+                }`}
+              >
+                For You
+              </button>
+              <button
+                type="button"
+                onClick={() => setFeedFilter('all')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  feedFilter === 'all'
+                    ? 'bg-white dark:bg-gray-900 text-primary-600 dark:text-primary-400 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400'
+                }`}
+              >
+                Chronological
+              </button>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* 3. CATEGORY SHOWCASE SECTIONS */}
-      <section aria-labelledby="technology-desk">
-        <SectionHeader
-          title="Technology & Silicon Frontiers"
-          subtitle="Semiconductor sovereignty, machine learning governance, and cryptography"
-          viewAllLink="/category/technology"
-        />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {MOCK_ARTICLES.filter((a) => a.categorySlug === 'technology' || a.categorySlug === 'sports' || a.categorySlug === 'entertainment').slice(0, 3).map((article) => (
-            <NewsCard key={article.id} article={article} />
-          ))}
-        </div>
-      </section>
+          {feedLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-48 bg-gray-100 dark:bg-gray-900 rounded-2xl animate-pulse" />
+              ))}
+            </div>
+          ) : feedPosts.length === 0 ? (
+            <div className="py-12 text-center text-gray-400 text-sm">
+              No recent dispatches matching your feed criteria.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {feedPosts.map((post) => (
+                <article
+                  key={post._id}
+                  className="group p-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 flex flex-col justify-between hover:shadow-md transition-all"
+                >
+                  <div className="space-y-2">
+                    {post.category && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-primary-600 dark:text-primary-400">
+                        {post.category.name}
+                      </span>
+                    )}
+                    <h4 className="text-sm font-bold font-serif text-gray-900 dark:text-white line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                      <Link to={`/article/${post.slug}`}>{post.title}</Link>
+                    </h4>
+                    {post.summary && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+                        {post.summary}
+                      </p>
+                    )}
+                  </div>
 
-      <section aria-labelledby="governance-desk">
-        <SectionHeader
-          title="Governance & Public Accountability"
-          subtitle="Legislative scrutiny, policy execution, and constitutional jurisprudence"
-          viewAllLink="/category/politics"
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {MOCK_ARTICLES.filter((a) => a.categorySlug === 'politics' || a.categorySlug === 'national').slice(0, 2).map((article) => (
-            <NewsCard key={article.id} article={article} layout="horizontal" />
-          ))}
-        </div>
-      </section>
+                  <div className="pt-3 mt-3 border-t border-gray-100 dark:border-gray-800 text-[11px] text-gray-400 flex items-center justify-between">
+                    <span>{post.author?.name || 'Correspondent'}</span>
+                    {post.publishedAt && (
+                      <span>{new Date(post.publishedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 };

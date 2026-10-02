@@ -41,7 +41,7 @@ export const ForgotPasswordPage: React.FC = () => {
         <div className="p-3 rounded bg-slate-50 dark:bg-navy-900 border border-slate-200 dark:border-navy-750 text-xs text-slate-600 dark:text-slate-400 flex items-start gap-2">
           <ShieldCheck className="w-4 h-4 text-editorial-red shrink-0 mt-0.5" />
           <div>
-            <strong>Phase 1 Scope:</strong> Email recovery services (Resend) will be integrated in later phases.
+            <strong>Phase 5 Scope:</strong> Transactional email delivery (Resend) will be integrated in Phase 5.
           </div>
         </div>
 

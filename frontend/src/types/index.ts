@@ -193,8 +193,58 @@ export interface Post {
   pollDetails?: PollDetails;
   eventDetails?: EventDetails;
   previewToken?: string;
+  views?: number;
+  likeCount?: number;
+  commentCount?: number;
+  isLiked?: boolean;
+  isBookmarked?: boolean;
+  isGated?: boolean;
+  activeLanguage?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Comment {
+  _id: string;
+  post: string;
+  user: {
+    _id: string;
+    name: string;
+    avatar?: string;
+    role: string;
+  };
+  content: string;
+  status: 'visible' | 'hidden' | 'deleted';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PollVoteResult {
+  totalVotes: number;
+  results: {
+    id: string;
+    text: string;
+    votes: number;
+    percentage: number;
+  }[];
+  userVotedOptionId?: string;
+}
+
+export interface Bookmark {
+  _id: string;
+  user: string;
+  post: Post;
+  createdAt: string;
+}
+
+export interface HomepageData {
+  heroStory: Post | null;
+  breakingNews: Post[];
+  featuredArticles: Post[];
+  categorySections: {
+    category: Category;
+    posts: Post[];
+  }[];
 }
 
 export type MediaResourceType = 'image' | 'video' | 'audio' | 'document';

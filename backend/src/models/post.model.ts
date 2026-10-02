@@ -126,6 +126,9 @@ export interface IPost extends Document {
   pollDetails?: IPollDetails;
   eventDetails?: IEventDetails;
   previewToken?: string;
+  views: number;
+  likeCount: number;
+  commentCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -328,6 +331,23 @@ const postSchema = new Schema<IPost>(
     previewToken: {
       type: String,
       index: true
+    },
+    views: {
+      type: Number,
+      default: 0,
+      min: 0,
+      index: true
+    },
+    likeCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+      index: true
+    },
+    commentCount: {
+      type: Number,
+      default: 0,
+      min: 0
     }
   },
   {
@@ -337,8 +357,21 @@ const postSchema = new Schema<IPost>(
 
 // Compound indexes for high-speed queries
 postSchema.index({ status: 1, publishedAt: -1 });
-postSchema.index({ status: 1, category: 1 });
-postSchema.index({ status: 1, language: 1 });
+postSchema.index({ status: 1, category: 1, publishedAt: -1 });
+postSchema.index({ status: 1, language: 1, publishedAt: -1 });
+postSchema.index({ status: 1, postFormat: 1, publishedAt: -1 });
+postSchema.index({ status: 1, publishedAt: -1, views: -1 });
 postSchema.index({ createdAt: -1 });
+postSchema.index(
+  {
+    title: 'text',
+    summary: 'text',
+    'translations.title': 'text',
+    'translations.summary': 'text'
+  },
+  {
+    language_override: 'none'
+  }
+);
 
 export const Post = mongoose.model<IPost>('Post', postSchema);

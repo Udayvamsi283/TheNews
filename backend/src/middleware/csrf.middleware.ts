@@ -39,7 +39,7 @@ export const csrfProtection = (req: Request, res: Response, next: NextFunction):
     '/api/v1/auth/register',
     '/api/v1/auth/csrf-token'
   ];
-  if (exemptPaths.some((p) => req.path.startsWith(p))) {
+  if (exemptPaths.some((p) => req.path.startsWith(p)) || req.path.endsWith('/view')) {
     return next();
   }
 

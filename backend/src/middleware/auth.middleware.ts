@@ -102,3 +102,35 @@ export const requireRole = (...roles: UserRole[]) => {
     next();
   };
 };
+
+export const optionalAuthenticate = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    let token: string | undefined;
+
+    if (req.cookies && req.cookies.token) {
+      token = req.cookies.token;
+    } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
+      return next();
+    }
+
+    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
+    const user = await User.findById(decoded.id);
+
+    if (user && user.status !== 'disabled') {
+      req.user = user;
+    }
+
+    next();
+  } catch {
+    // If token is invalid or expired, continue as guest
+    next();
+  }
+};

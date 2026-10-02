@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Sun, Moon, Globe, User, Menu, X, ShieldCheck, LogOut, Settings } from 'lucide-react';
+import { Search, Sun, Moon, Globe, User, Menu, X, ShieldCheck, LogOut, Settings, Bookmark } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../hooks/useAuth';
@@ -51,8 +51,18 @@ export const Header: React.FC = () => {
   const userMenuItems = [
     {
       label: 'My Profile',
-      icon: <Settings className="w-4 h-4 text-slate-500" />,
+      icon: <User className="w-4 h-4 text-slate-500" />,
       onClick: () => navigate('/profile')
+    },
+    {
+      label: 'Saved Articles',
+      icon: <Bookmark className="w-4 h-4 text-slate-500" />,
+      onClick: () => navigate('/saved')
+    },
+    {
+      label: 'Reading Preferences',
+      icon: <Settings className="w-4 h-4 text-slate-500" />,
+      onClick: () => navigate('/settings')
     },
     ...(isAdmin
       ? [
