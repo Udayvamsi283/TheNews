@@ -8,13 +8,15 @@ import {
   getLatestPosts,
   getTrendingPosts,
   getVideoPosts,
-  searchPosts
+  searchPosts,
+  getSitemap
 } from '../controllers/public.controller.js';
 import { optionalAuthenticate } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
 // Public Content Discovery
+router.get('/sitemap.xml', getSitemap);
 router.get('/home', getHomepageData);
 router.get('/feed', optionalAuthenticate, getFeed);
 router.get('/posts', optionalAuthenticate, getLatestPosts);

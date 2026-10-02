@@ -13,13 +13,30 @@ import apiRouter from './routes/index.js';
 export const createApp = (): Application => {
   const app = express();
 
+  // Trust reverse proxy for secure cookies and accurate IP rate limiting on Render
+  app.set('trust proxy', 1);
+
   // Security Headers
   app.use(helmet());
 
-  // CORS Configuration
+  // CORS Configuration - In production, restrict strictly to CLIENT_URL
+  const allowedOrigins: string[] =
+    env.NODE_ENV === 'production'
+      ? env.CLIENT_URL.includes(',')
+        ? env.CLIENT_URL.split(',').map((u) => u.trim())
+        : [env.CLIENT_URL]
+      : [env.CLIENT_URL, 'http://localhost:5173', 'http://127.0.0.1:5173'];
+
   app.use(
     cors({
-      origin: [env.CLIENT_URL, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+      origin: (origin, callback) => {
+        // Allow requests with no origin (e.g. mobile apps, curl, or same-origin server healthchecks)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+        return callback(new Error(`CORS origin ${origin} not permitted.`));
+      },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'x-csrf-token']

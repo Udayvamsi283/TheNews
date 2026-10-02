@@ -1,14 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { apiClient } from '../services/apiClient';
 import { BreakingNewsBar } from '../components/public/BreakingNewsBar';
 import { HeroStory } from '../components/public/HeroStory';
 import { CategorySection } from '../components/public/CategorySection';
+import { updateSeoMetadata } from '../utils/seo';
 import { Flame, Clock, Radio, ArrowRight, Lock } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
   const [feedFilter, setFeedFilter] = useState<'for-you' | 'all'>('for-you');
+
+  useEffect(() => {
+    updateSeoMetadata({
+      title: 'Independent Digital Newsroom',
+      description: 'The News delivers rigorous, uncompromised investigative reporting, daily dispatches, and public interest journalism.'
+    });
+  }, []);
 
   // Fetch Homepage structured layout
   const { data: homeData, isLoading: homeLoading } = useQuery({

@@ -21,6 +21,7 @@ import { VideoRenderer } from '../components/public/format-renderers/VideoRender
 import { AudioRenderer } from '../components/public/format-renderers/AudioRenderer';
 import { PollRenderer } from '../components/public/format-renderers/PollRenderer';
 import { EventRenderer } from '../components/public/format-renderers/EventRenderer';
+import { updateSeoMetadata } from '../utils/seo';
 import { useToast } from '../components/ui/Toast';
 
 export const ArticlePage: React.FC = () => {
@@ -38,12 +39,18 @@ export const ArticlePage: React.FC = () => {
   const post = data?.post;
   const isGated = data?.isGated ?? false;
 
-  // Record view on mount
+  // Record view on mount & update dynamic SEO metadata
   useEffect(() => {
     if (post?._id) {
       apiClient.recordView(post._id);
+      updateSeoMetadata({
+        title: post.title,
+        description: post.summary || post.seo?.metaDescription || '',
+        image: post.featuredImage?.url || post.images?.[0]?.url || '',
+        type: 'article'
+      });
     }
-  }, [post?._id]);
+  }, [post?._id, post?.title, post?.summary]);
 
   if (isLoading) {
     return (

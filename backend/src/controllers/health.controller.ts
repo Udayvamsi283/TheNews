@@ -22,7 +22,7 @@ export const getHealth = (_req: Request, res: Response): void => {
       status: dbStatusMap[dbState] || 'unknown',
       connected: isDbConnected,
       name: mongoose.connection.name || 'the_news',
-      host: mongoose.connection.host || 'unknown'
+      ...(env.NODE_ENV !== 'production' ? { host: mongoose.connection.host || 'unknown' } : {})
     }
   });
 };

@@ -7,6 +7,7 @@ import { Like } from '../models/like.model.js';
 import { Bookmark } from '../models/bookmark.model.js';
 import { PollVote } from '../models/pollVote.model.js';
 import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
+import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 
 // In-memory sliding-window view throttling: Map<token, timestamp>
@@ -737,3 +738,80 @@ export const searchPosts = async (req: Request, res: Response, next: NextFunctio
     next(error);
   }
 };
+
+// ==========================================
+// 11. DYNAMIC XML SITEMAP GENERATOR
+// ==========================================
+
+export const getSitemap = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const clientBaseUrl = (env.CLIENT_URL.split(',')[0] || 'http://localhost:5173').trim().replace(/\/$/, '');
+    const now = new Date();
+
+    const [posts, categories] = await Promise.all([
+      Post.find({
+        status: 'published',
+        registeredOnly: false,
+        publishedAt: { $lte: now }
+      })
+        .select('slug updatedAt publishedAt')
+        .sort({ publishedAt: -1 })
+        .limit(1000)
+        .lean(),
+      Category.find({ isActive: true })
+        .select('slug updatedAt')
+        .limit(100)
+        .lean()
+    ]);
+
+    const staticRoutes = [
+      { path: '', changefreq: 'hourly', priority: '1.0' },
+      { path: '/latest', changefreq: 'always', priority: '0.9' },
+      { path: '/trending', changefreq: 'hourly', priority: '0.8' },
+      { path: '/videos', changefreq: 'daily', priority: '0.7' }
+    ];
+
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+
+    // Static pages
+    for (const route of staticRoutes) {
+      xml += '  <url>\n';
+      xml += `    <loc>${clientBaseUrl}${route.path}</loc>\n`;
+      xml += `    <lastmod>${now.toISOString().split('T')[0]}</lastmod>\n`;
+      xml += `    <changefreq>${route.changefreq}</changefreq>\n`;
+      xml += `    <priority>${route.priority}</priority>\n`;
+      xml += '  </url>\n';
+    }
+
+    // Categories
+    for (const cat of categories) {
+      const lastmod = (cat.updatedAt ? new Date(cat.updatedAt) : now).toISOString().split('T')[0];
+      xml += '  <url>\n';
+      xml += `    <loc>${clientBaseUrl}/category/${cat.slug}</loc>\n`;
+      xml += `    <lastmod>${lastmod}</lastmod>\n`;
+      xml += '    <changefreq>daily</changefreq>\n';
+      xml += '    <priority>0.8</priority>\n';
+      xml += '  </url>\n';
+    }
+
+    // Published public posts (no drafts, no registered-only)
+    for (const post of posts) {
+      const lastmod = (post.updatedAt ? new Date(post.updatedAt) : (post.publishedAt ? new Date(post.publishedAt) : now)).toISOString().split('T')[0];
+      xml += '  <url>\n';
+      xml += `    <loc>${clientBaseUrl}/article/${post.slug}</loc>\n`;
+      xml += `    <lastmod>${lastmod}</lastmod>\n`;
+      xml += '    <changefreq>weekly</changefreq>\n';
+      xml += '    <priority>0.7</priority>\n';
+      xml += '  </url>\n';
+    }
+
+    xml += '</urlset>';
+
+    res.header('Content-Type', 'application/xml');
+    res.status(200).send(xml);
+  } catch (error) {
+    next(error);
+  }
+};
+

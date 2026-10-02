@@ -1,0 +1,18 @@
+# robots.txt for The News
+User-agent: *
+Allow: /
+Allow: /latest
+Allow: /trending
+Allow: /videos
+Allow: /category/
+Allow: /article/
+
+# Disallow private, administrative, and preview surfaces
+Disallow: /admin/
+Disallow: /preview/
+Disallow: /saved
+Disallow: /settings
+Disallow: /profile
+
+# Sitemap index
+Sitemap: https://the-news-public.vercel.app/api/v1/public/sitemap.xml

@@ -25,9 +25,17 @@ export const errorHandler = (
       field: e.path.join('.'),
       message: e.message
     })) || err.issues;
+  } else if (err.name === 'CastError') {
+    statusCode = 400;
+    message = 'Invalid resource identifier format.';
+  } else if (err.name === 'MongoServerError' && err.code === 11000) {
+    statusCode = 409;
+    message = 'A resource with conflicting unique attributes already exists.';
+  } else if (statusCode >= 500 && env.NODE_ENV === 'production') {
+    message = 'An unexpected internal error occurred. Please try again later.';
   }
 
-  logger.error(`[${req.method}] ${req.originalUrl} - ${statusCode} - ${message}`, err.stack);
+  logger.error(`[${req.method}] ${req.originalUrl} - ${statusCode} - ${err.message || message}`, err.stack);
 
   res.status(statusCode).json({
     success: false,

@@ -14,4 +14,22 @@ export default defineConfig({
     port: 5173,
     host: true,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-tanstack': ['@tanstack/react-query'],
+          'vendor-icons': ['lucide-react'],
+          'vendor-tiptap': [
+            '@tiptap/react',
+            '@tiptap/starter-kit',
+            '@tiptap/extension-image',
+            '@tiptap/extension-link'
+          ]
+        }
+      }
+    },
+    chunkSizeWarningLimit: 600
+  }
 });
