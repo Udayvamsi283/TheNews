@@ -319,6 +319,94 @@ export const deleteComment = async (req: AuthenticatedRequest, res: Response, ne
   }
 };
 
+/**
+ * GET /api/v1/engagement/admin/comments (Admin comment list with pagination and filtering)
+ */
+export const getAdminComments = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit as string, 10) || 20), 50);
+    const skip = (page - 1) * limit;
+    const status = req.query.status as string;
+
+    const filter: any = {};
+    if (status && ['visible', 'hidden', 'deleted'].includes(status)) {
+      filter.status = status;
+    }
+
+    const [total, comments] = await Promise.all([
+      Comment.countDocuments(filter),
+      Comment.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('user', 'name email avatar role')
+        .populate('post', 'title slug')
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        comments,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PATCH /api/v1/engagement/admin/comments/:id/status (Admin change comment status)
+ */
+export const updateCommentStatusByAdmin = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['visible', 'hidden', 'deleted'].includes(status)) {
+      res.status(400).json({ success: false, message: 'Invalid comment status. Must be visible, hidden, or deleted.' });
+      return;
+    }
+
+    const comment = await Comment.findById(id);
+    if (!comment) {
+      res.status(404).json({ success: false, message: 'Comment not found.' });
+      return;
+    }
+
+    const previousStatus = comment.status;
+    comment.status = status;
+    await comment.save();
+
+    // Adjust Post commentCount invariant
+    if (previousStatus === 'visible' && status !== 'visible') {
+      await Post.updateOne(
+        { _id: comment.post, commentCount: { $gt: 0 } },
+        { $inc: { commentCount: -1 } }
+      );
+    } else if (previousStatus !== 'visible' && status === 'visible') {
+      await Post.updateOne(
+        { _id: comment.post },
+        { $inc: { commentCount: 1 } }
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Comment status updated to ${status}.`,
+      data: comment
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ==========================================
 // 4. POLL VOTING (Atomic MongoDB Transaction)
 // ==========================================

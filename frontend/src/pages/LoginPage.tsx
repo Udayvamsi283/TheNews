@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
-import { Checkbox } from '../components/ui/Checkbox';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../hooks/useAuth';
@@ -15,7 +14,6 @@ export const LoginPage: React.FC = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Return to intended page if protected route redirected here
@@ -33,7 +31,6 @@ export const LoginPage: React.FC = () => {
       const response = await login(email, password);
       showToast(`Welcome back, ${response.user.name}!`, 'success');
 
-      // If user is admin and was heading to /admin, send them there; otherwise default destination
       if (response.user.role === 'admin' && from === '/') {
         navigate('/admin');
       } else {
@@ -48,7 +45,7 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto py-8 sm:py-12">
+    <div className="max-w-md mx-auto py-8 sm:py-16">
       <div className="bg-white dark:bg-navy-850 p-6 sm:p-8 rounded border border-slate-200 dark:border-navy-700 shadow-sm space-y-6">
         {/* Brand & Heading */}
         <div className="text-center space-y-2">
@@ -59,10 +56,10 @@ export const LoginPage: React.FC = () => {
             <span className="w-2 h-2 rounded-full bg-editorial-red inline-block" />
           </Link>
           <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Journalist & Subscriber Sign In
+            Sign In
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Access your editorial dashboard, saved reading dossiers, and newsroom workflows.
+            Sign in to access your account, saved articles, and preferences.
           </p>
         </div>
 
@@ -74,7 +71,7 @@ export const LoginPage: React.FC = () => {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="admin@thenews.org"
+            placeholder="reader@thenews.org"
             leftIcon={<Mail className="w-4 h-4" />}
             disabled={isSubmitting}
           />
@@ -90,13 +87,7 @@ export const LoginPage: React.FC = () => {
             disabled={isSubmitting}
           />
 
-          <div className="flex items-center justify-between text-xs">
-            <Checkbox
-              label="Remember this workstation"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              disabled={isSubmitting}
-            />
+          <div className="flex items-center justify-end text-xs">
             <Link
               to="/forgot-password"
               className="text-editorial-red hover:underline font-semibold"
@@ -115,12 +106,14 @@ export const LoginPage: React.FC = () => {
           </Button>
         </form>
 
-        {/* Register footer link */}
-        <div className="pt-4 border-t border-slate-100 dark:border-navy-750 text-center text-xs text-slate-500 dark:text-slate-400">
-          Don't have an editorial account?{' '}
-          <Link to="/register" className="text-navy-900 dark:text-white font-bold hover:underline">
-            Register here
-          </Link>
+        {/* Footer info */}
+        <div className="pt-4 border-t border-slate-100 dark:border-navy-750 text-center text-xs text-slate-500 dark:text-slate-400 space-y-2">
+          <div>
+            Don't have an account?{' '}
+            <Link to="/register" className="text-editorial-red hover:underline font-semibold">
+              Create an account
+            </Link>
+          </div>
         </div>
       </div>
     </div>

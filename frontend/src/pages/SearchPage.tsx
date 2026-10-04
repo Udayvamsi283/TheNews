@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../services/apiClient';
 import { Search as SearchIcon, X, Clock, Lock, ArrowRight } from 'lucide-react';
+import { ArticleImagePlaceholder } from '../components/common/ArticleImagePlaceholder';
 
 export const SearchPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -94,9 +95,9 @@ export const SearchPage: React.FC = () => {
           ))}
         </div>
       ) : posts.length === 0 ? (
-        <div className="py-16 text-center">
+        <div className="py-20 text-center">
           <h2 className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-1">
-            No matching dispatches found
+            No articles found.
           </h2>
           <p className="text-xs text-gray-400">
             Try refining your keywords or checking for spelling errors.
@@ -105,15 +106,12 @@ export const SearchPage: React.FC = () => {
       ) : (
         <div className="space-y-6">
           <div className="text-xs text-gray-400 font-medium">
-            Found {pagination?.total || posts.length} dispatches matching &quot;{queryParam}&quot;
+            Found {pagination?.total || posts.length} article(s) matching &quot;{queryParam}&quot;
           </div>
 
           <div className="space-y-4">
             {posts.map((post) => {
-              const imageUrl =
-                post.featuredImage?.url ||
-                post.images?.[0]?.url ||
-                'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=400&q=80';
+              const imageUrl = post.featuredImage?.url || post.images?.[0]?.url || '';
 
               const publishedDate = post.publishedAt
                 ? new Date(post.publishedAt).toLocaleDateString([], {
@@ -130,11 +128,15 @@ export const SearchPage: React.FC = () => {
                 >
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800 relative">
-                      <img
-                        src={imageUrl}
-                        alt={post.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
+                      {imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt={post.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                      ) : (
+                        <ArticleImagePlaceholder category={post.category?.name} className="h-full aspect-square" />
+                      )}
                       {post.registeredOnly && (
                         <div className="absolute top-1 left-1 p-0.5 rounded bg-gray-900/80 text-amber-300">
                           <Lock className="w-2.5 h-2.5" />
@@ -157,7 +159,7 @@ export const SearchPage: React.FC = () => {
                         </p>
                       )}
                       <div className="flex items-center gap-3 text-xs text-gray-400 pt-1">
-                        <span>{post.author?.name || 'Staff Reporter'}</span>
+                        <span>{post.author?.name || 'The News'}</span>
                         <span>•</span>
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" /> {publishedDate}

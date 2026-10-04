@@ -113,6 +113,8 @@ export const createPostSchema = z.object({
   scheduledAt: z.string().or(z.date()).optional(),
   isFullWidth: z.boolean().optional().default(false),
   registeredOnly: z.boolean().optional().default(false),
+  isFeatured: z.boolean().optional().default(false),
+  isBreaking: z.boolean().optional().default(false),
   externalUrl: z.string().optional(),
   seo: seoSchema,
   faq: z.array(faqItemSchema).optional().default([]),

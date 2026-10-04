@@ -231,7 +231,7 @@ export const ArticlePage: React.FC = () => {
             )}
             <div>
               <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                By {post.author?.name || 'Staff Reporter'}
+                By {post.author?.name || 'The News'}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400">
                 {publishedDate}

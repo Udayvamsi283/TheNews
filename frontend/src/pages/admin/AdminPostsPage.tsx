@@ -151,10 +151,10 @@ export const AdminPostsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-navy-750">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
-            Editorial Dispatches
+            Articles
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Manage articles, galleries, audio/video dispatches, schedules, and multilingual translations.
+            Manage articles, galleries, multimedia, schedules, and multilingual translations.
           </p>
         </div>
 
@@ -166,7 +166,7 @@ export const AdminPostsPage: React.FC = () => {
           </Link>
           <Link to="/admin/posts/new">
             <Button size="sm" leftIcon={<FilePlus className="w-4 h-4" />}>
-              Create Post
+              New Article
             </Button>
           </Link>
         </div>
@@ -177,7 +177,7 @@ export const AdminPostsPage: React.FC = () => {
         {/* Status Tabs */}
         <div className="flex border-b border-slate-200 dark:border-navy-750 gap-2 overflow-x-auto">
           {[
-            { id: 'all', label: 'All Dispatches' },
+            { id: 'all', label: 'All Posts' },
             { id: 'published', label: 'Published' },
             { id: 'draft', label: 'Drafts' },
             { id: 'scheduled', label: 'Scheduled' },
@@ -295,15 +295,25 @@ export const AdminPostsPage: React.FC = () => {
                       <div className="max-w-md space-y-1">
                         <Link
                           to={`/admin/posts/${post._id}/edit`}
-                          className="font-bold text-slate-900 dark:text-white hover:text-editorial-red transition-colors text-xs line-clamp-1"
+                          className="font-bold text-slate-900 dark:text-white hover:text-editorial-red transition-colors text-xs line-clamp-1 flex items-center gap-1.5"
                         >
-                          {post.title}
+                          <span className="truncate">{post.title}</span>
+                          {post.isFeatured && (
+                            <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 font-bold shrink-0">
+                              Featured
+                            </span>
+                          )}
+                          {post.isBreaking && (
+                            <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-red-100 text-editorial-red dark:bg-red-900/40 dark:text-red-300 font-bold shrink-0">
+                              Breaking
+                            </span>
+                          )}
                         </Link>
                         <p className="text-[11px] text-slate-400 line-clamp-1 font-sans">
                           {post.summary || 'No summary provided'}
                         </p>
                         <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                          <span>By {post.author?.name || 'Newsroom'}</span>
+                          <span>By {post.author?.name || 'The News'}</span>
                           <span>•</span>
                           <span className="font-mono">/{post.slug}</span>
                           {post.translations && post.translations.length > 0 && (

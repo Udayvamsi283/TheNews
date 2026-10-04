@@ -35,22 +35,48 @@ export const getHomepageData = async (req: Request, res: Response, next: NextFun
     const now = new Date();
     const publishedQuery = { status: 'published', publishedAt: { $lte: now } };
 
-    // 1. Fetch top lead & secondary stories
-    const topStories = await Post.find(publishedQuery)
+    // 1. Fetch hero story (explicitly featured first, else latest published)
+    let heroStory: any = await Post.findOne({
+      ...publishedQuery,
+      isFeatured: true
+    })
       .sort({ publishedAt: -1 })
-      .limit(3)
       .populate('category', 'name slug')
       .populate('language', 'name code')
       .populate('author', 'name avatar')
-      .select('title slug summary featuredImage category language author publishedAt postFormat readingTime views likeCount commentCount isFullWidth');
+      .select('title slug summary featuredImage category language author publishedAt postFormat readingTime views likeCount commentCount isFullWidth isFeatured');
 
-    const heroStory = topStories[0] || null;
-    const secondaryFeatured = topStories.slice(1);
+    if (!heroStory) {
+      heroStory = await Post.findOne(publishedQuery)
+        .sort({ publishedAt: -1 })
+        .populate('category', 'name slug')
+        .populate('language', 'name code')
+        .populate('author', 'name avatar')
+        .select('title slug summary featuredImage category language author publishedAt postFormat readingTime views likeCount commentCount isFullWidth isFeatured');
+    }
 
-    // 2. Latest wire dispatches (next 8)
-    const latestPosts = await Post.find(publishedQuery)
+    const heroId = heroStory?._id;
+
+    // Fetch secondary featured stories (excluding hero)
+    const secondaryFeatured = await Post.find({
+      ...publishedQuery,
+      ...(heroId ? { _id: { $ne: heroId } } : {})
+    })
+      .sort({ isFeatured: -1, publishedAt: -1 })
+      .limit(2)
+      .populate('category', 'name slug')
+      .populate('language', 'name code')
+      .populate('author', 'name avatar')
+      .select('title slug summary featuredImage category language author publishedAt postFormat readingTime views likeCount commentCount isFullWidth isFeatured');
+
+    const excludedIds = [heroId, ...secondaryFeatured.map((p) => p._id)].filter(Boolean);
+
+    // 2. Latest news stories (excluding hero and secondary featured)
+    const latestPosts = await Post.find({
+      ...publishedQuery,
+      ...(excludedIds.length > 0 ? { _id: { $nin: excludedIds } } : {})
+    })
       .sort({ publishedAt: -1 })
-      .skip(3)
       .limit(8)
       .populate('category', 'name slug')
       .populate('language', 'name code')
@@ -106,10 +132,10 @@ export const getHomepageData = async (req: Request, res: Response, next: NextFun
     // Filter out categories with 0 posts
     const nonEmptySections = categorySections.filter((sec) => sec.posts.length > 0);
 
-    // 6. Breaking News wire (most recent urgent dispatch or top story)
+    // 6. Breaking News (published posts explicitly marked as breaking news)
     const breakingPost = await Post.findOne({
       ...publishedQuery,
-      publishedAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+      isBreaking: true
     })
       .sort({ publishedAt: -1 })
       .select('title slug category publishedAt');

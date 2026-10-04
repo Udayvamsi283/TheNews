@@ -115,6 +115,8 @@ export interface IPost extends Document {
   scheduledAt?: Date;
   isFullWidth: boolean;
   registeredOnly: boolean;
+  isFeatured: boolean;
+  isBreaking: boolean;
   externalUrl?: string;
   seo: ISeoMetadata;
   faq: IFaqItem[];
@@ -237,6 +239,16 @@ const postSchema = new Schema<IPost>(
     registeredOnly: {
       type: Boolean,
       default: false
+    },
+    isFeatured: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    isBreaking: {
+      type: Boolean,
+      default: false,
+      index: true
     },
     externalUrl: {
       type: String,

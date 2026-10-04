@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Post } from '../../types';
 import { Clock, Eye, Heart, MessageSquare, Lock } from 'lucide-react';
+import { ArticleImagePlaceholder } from '../common/ArticleImagePlaceholder';
 
 interface HeroStoryProps {
   post: Post;
@@ -16,25 +17,25 @@ export const HeroStory: React.FC<HeroStoryProps> = ({ post }) => {
       })
     : '';
 
-  // Approximate reading time (200 words/min)
   const wordCount = post.content ? post.content.split(/\s+/).length : (post.summary ? post.summary.split(/\s+/).length * 4 : 200);
   const readingTime = Math.max(1, Math.ceil(wordCount / 200));
 
-  const imageUrl =
-    post.featuredImage?.url ||
-    post.images?.[0]?.url ||
-    'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=1200&q=80';
+  const imageUrl = post.featuredImage?.url || post.images?.[0]?.url || '';
 
   return (
     <article className="group relative rounded-3xl overflow-hidden bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-lg hover:shadow-xl transition-all duration-300">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
         {/* Image Section */}
         <div className="lg:col-span-7 relative min-h-[300px] lg:min-h-[460px] overflow-hidden bg-gray-100 dark:bg-gray-800">
-          <img
-            src={imageUrl}
-            alt={post.featuredImage?.alt || post.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-          />
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={post.featuredImage?.alt || post.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+            />
+          ) : (
+            <ArticleImagePlaceholder category={post.category?.name} className="h-full min-h-[300px] lg:min-h-[460px]" />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent lg:hidden" />
 
           {post.registeredOnly && (
@@ -90,7 +91,7 @@ export const HeroStory: React.FC<HeroStoryProps> = ({ post }) => {
               )}
               <div>
                 <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight">
-                  {post.author?.name || 'Staff Reporter'}
+                  {post.author?.name || 'The News'}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{publishedDate}</p>
               </div>

@@ -117,6 +117,8 @@ export const AdminNewPostPage: React.FC = () => {
   const [featuredImage, setFeaturedImage] = useState<FeaturedImage | undefined>();
   const [isFullWidth, setIsFullWidth] = useState(false);
   const [registeredOnly, setRegisteredOnly] = useState(false);
+  const [isFeatured, setIsFeatured] = useState(false);
+  const [isBreaking, setIsBreaking] = useState(false);
   const [externalUrl, setExternalUrl] = useState('');
 
   // Scheduling
@@ -217,6 +219,8 @@ export const AdminNewPostPage: React.FC = () => {
         scheduledAt: status === 'scheduled' ? new Date(scheduledAt).toISOString() : undefined,
         isFullWidth,
         registeredOnly,
+        isFeatured,
+        isBreaking,
         externalUrl: externalUrl.trim(),
         seo,
         faq,
@@ -674,6 +678,20 @@ export const AdminNewPostPage: React.FC = () => {
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white pb-2 border-b border-slate-200 dark:border-navy-750">
               Display & Access Controls
             </h3>
+
+            <Checkbox
+              label="Featured on Homepage"
+              description="Pins this story to the lead hero section of the front page."
+              checked={isFeatured}
+              onChange={(e) => setIsFeatured(e.target.checked)}
+            />
+
+            <Checkbox
+              label="Breaking News Alert"
+              description="Displays this article in the top breaking news ticker across the platform."
+              checked={isBreaking}
+              onChange={(e) => setIsBreaking(e.target.checked)}
+            />
 
             <Checkbox
               label="Full-Width Article Layout"

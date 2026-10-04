@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { apiClient } from '../services/apiClient';
-import { Play, Clock, Film } from 'lucide-react';
+import { Play, Film, Clock } from 'lucide-react';
+import { ArticleImagePlaceholder } from '../components/common/ArticleImagePlaceholder';
 
 export const VideosPage: React.FC = () => {
   const [page, setPage] = useState(1);
 
   const { data, isLoading } = useQuery({
     queryKey: ['public', 'videos', page],
-    queryFn: () => apiClient.getVideoPosts({ page, limit: 12 })
+    queryFn: () => apiClient.getVideoPosts({ page, limit: 9 })
   });
 
   const posts = data?.posts || [];
@@ -17,9 +18,9 @@ export const VideosPage: React.FC = () => {
 
   const formatDuration = (seconds?: number) => {
     if (!seconds) return '';
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s < 10 ? '0' : ''}${s}`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
   return (
@@ -33,7 +34,7 @@ export const VideosPage: React.FC = () => {
           Video Reports & Documentaries
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          In-depth video dispatches, investigations, and field broadcasts from our journalists.
+          In-depth video reporting and field broadcasts from our journalists.
         </p>
       </div>
 
@@ -44,16 +45,13 @@ export const VideosPage: React.FC = () => {
           ))}
         </div>
       ) : posts.length === 0 ? (
-        <div className="py-16 text-center text-gray-400 font-medium">
-          No published video reports currently available.
+        <div className="py-20 text-center text-gray-400 font-medium">
+          No videos published yet.
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {posts.map((post) => {
-            const imageUrl =
-              post.featuredImage?.url ||
-              post.images?.[0]?.url ||
-              'https://images.unsplash.com/photo-1579245486065-224c6e737da9?w=800&q=80';
+            const imageUrl = post.featuredImage?.url || post.images?.[0]?.url || '';
 
             return (
               <article
@@ -63,12 +61,16 @@ export const VideosPage: React.FC = () => {
                 <div>
                   {/* Video Thumbnail with play icon */}
                   <Link to={`/article/${post.slug}`} className="relative block aspect-video overflow-hidden bg-black">
-                    <img
-                      src={imageUrl}
-                      alt={post.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90"
-                      loading="lazy"
-                    />
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={post.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <ArticleImagePlaceholder category="Video" className="h-full aspect-video" />
+                    )}
                     <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-center justify-center">
                       <div className="w-12 h-12 rounded-full bg-white/90 text-primary-600 group-hover:scale-110 group-hover:bg-white transition-all flex items-center justify-center shadow-lg">
                         <Play className="w-6 h-6 fill-primary-600 ml-0.5" />
@@ -101,7 +103,7 @@ export const VideosPage: React.FC = () => {
                 </div>
 
                 <div className="px-5 pb-5 pt-0 flex items-center justify-between text-xs text-gray-400 border-t border-gray-100 dark:border-gray-800/60 pt-3">
-                  <span>{post.author?.name || 'Video Desk'}</span>
+                  <span>{post.author?.name || 'The News'}</span>
                   {post.publishedAt && (
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3" />

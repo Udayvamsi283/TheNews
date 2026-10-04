@@ -1,117 +1,106 @@
-# THE NEWS — Multilingual Digital News Platform (Phase 1)
+# The News — Multilingual Digital News Platform
 
-> **Phase Status:** Phase 1 (Technical Foundation, Design System, Responsive Shells, Dev Infrastructure, Backend Foundation)  
-> **Target Audience:** Modern digital journalism client with mobile-first readership and desktop editorial workflows.
+> **Status:** Production-Ready MVP  
+> **Target Audience:** Modern digital journalism with mobile-first readership and desktop editorial workflows.
 
 ---
 
 ## 1. Project Overview
 
-**The News** is a production-quality digital news platform engineered for independent journalism. It combines an authoritative, restrained digital newsroom aesthetic with a scalable, type-safe full-stack foundation.
+**The News** is a production-quality digital news platform engineered for independent journalism. It pairs an authoritative, clean editorial presentation with a robust, type-safe full-stack architecture.
 
-This repository represents the **Phase 1 release**. In this phase, the technical foundation, responsive application shells, design system, database connectivity, and administrative framework have been established. Business logic, full database models, CRUD operations, authentication, and media uploads are explicitly reserved for subsequent phases.
+All editorial content originates directly from the database and is created and managed through the real Editorial Content Management System (CMS). The platform contains zero fabricated articles, zero mock statistics, and zero synthetic media.
+
+### Key Capabilities
+
+- **Real Editorial CMS:** Rich-text article authoring (TipTap), headline management, format selection (Article, Video, Gallery, Audio, Opinion, LiveBlog, Explainer, Poll), tags, categories, language assignment, and direct publishing or scheduling.
+- **Editorial Homepage Controls:** Direct editorial curation over hero stories (`isFeatured`) and breaking news alerts (`isBreaking`). The breaking news banner automatically hides when no active breaking alerts are flagged.
+- **Multilingual Support:** English, Spanish, and French post translations with language switching.
+- **Media Library:** Direct integration with Cloudinary for asset upload, indexing, metadata management, and deletion.
+- **Reader Engagement:** User registration, profile personalization (category interests, language preference), bookmarking, liking, flat reader comments, and interactive poll voting.
+- **Admin Moderation:** Comments moderation console (visibility toggling and deletion), user management, taxonomy control (categories, tags, languages), and real-time database metric counters.
+- **Production Security:** HTTP-only cookie JWT authentication, CSRF tokens, strict role-based access control, server-side content gating for registered users, rate limiting, and Helmet security headers.
 
 ---
 
-## 2. High-Level Architecture
-
-The project maintains independent deployability for frontend and backend:
+## 2. Architecture & Tech Stack
 
 ```text
 TheNews/
 ├── frontend/             # React 18 + Vite + TypeScript (Client SPA)
 │   ├── src/
 │   │   ├── components/   # UI primitives, editorial cards, layouts
-│   │   ├── hooks/        # Theme toggle & React Query health hooks
-│   │   ├── pages/        # Public newsroom & Admin CMS shells
-│   │   ├── routes/       # React Router central routing table
-│   │   ├── services/     # Centralized API client & isolated mock data
-│   │   ├── types/        # TypeScript contracts & interfaces
-│   │   ├── App.tsx       # QueryClient & Toast providers
-│   │   ├── main.tsx      # DOM mount & strict mode
+│   │   ├── context/      # Auth & Theme context providers
+│   │   ├── hooks/        # React Query hooks & auth utilities
+│   │   ├── pages/        # Public newsroom & Admin CMS views
+│   │   ├── routes/       # React Router routing table with role protection
+│   │   ├── services/     # Centralized API client (Axios)
+│   │   ├── types/        # TypeScript contracts & data schemas
 │   │   └── index.css     # Tailwind CSS & editorial typography
-│   ├── .env.example
 │   ├── package.json
-│   ├── tailwind.config.js
 │   └── vite.config.ts
 ├── backend/              # Node.js + Express + TypeScript + Mongoose
 │   ├── src/
-│   │   ├── config/       # Environment parsing (Zod) & MongoDB connection
-│   │   ├── controllers/  # Health diagnostic controller
-│   │   ├── middleware/   # Central error handling, 404, rate limiting
+│   │   ├── config/       # Environment parsing, MongoDB, Cloudinary
+│   │   ├── controllers/  # Posts, public, engagement, taxonomies, auth
+│   │   ├── middleware/   # Auth, CSRF, error handling, rate limiting
+│   │   ├── models/       # Mongoose schemas (Post, User, Comment, Poll, etc.)
 │   │   ├── routes/       # Versioned API routes (/api/v1)
-│   │   ├── utils/        # Structured logging
-│   │   ├── app.ts        # Express app assembly & security headers
-│   │   └── server.ts     # Process bootstrap & graceful shutdown
-│   ├── .env.example
+│   │   ├── validators/   # Zod validation schemas
+│   │   └── server.ts     # Express server bootstrap & graceful shutdown
 │   ├── package.json
 │   └── tsconfig.json
-├── .gitignore            # Root ignore rules for node_modules, .env, dist
 └── README.md
 ```
 
-### Production Deployment Targets
-- **Frontend SPA:** Vercel
-- **Backend API:** Render
-- **Database:** MongoDB Atlas
+### Technology Stack
+- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, TanStack Query v5, React Router v6, TipTap rich text, Lucide React icons.
+- **Backend:** Node.js, Express.js, TypeScript, Mongoose, Zod validation, bcrypt, jsonwebtoken.
+- **Database:** MongoDB Atlas.
+- **Media:** Cloudinary.
 
 ---
 
-## 3. Technology Stack
-
-### Frontend
-- **Framework & Bundler:** React 18, Vite 6, TypeScript
-- **Styling:** Tailwind CSS (Custom editorial palette: Deep Navy `#0B1F3A`, Warm Red Accent `#C2413B`, responsive breakpoints `320px`–`1920px`)
-- **Routing:** React Router v6 (`createBrowserRouter`, nested layouts)
-- **Data Fetching:** TanStack Query v5 (`@tanstack/react-query`)
-- **Forms & Validation:** React Hook Form + Zod
-- **Icons:** Lucide React
-
-### Backend
-- **Runtime & Web Framework:** Node.js, Express.js, TypeScript
-- **Database Driver:** Mongoose (MongoDB)
-- **Security:** Helmet, CORS, express-rate-limit
-- **Validation:** Zod
-- **Logging:** Structured JSON/timestamp logger & Morgan HTTP logger
-
----
-
-## 4. Environment Variables
-
-### Frontend (`frontend/.env`)
-```bash
-# Backend API Base URL
-VITE_API_BASE_URL=http://localhost:5000/api/v1
-```
-*(Reference: `frontend/.env.example`)*
+## 3. Environment Variables
 
 ### Backend (`backend/.env`)
 ```bash
 PORT=5000
-NODE_ENV=development
-MONGODB_URI=mongodb://127.0.0.1:27017/the_news
+NODE_ENV=production
+MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/the_news?retryWrites=true&w=majority
 CLIENT_URL=http://localhost:5173
+JWT_SECRET=your_strong_jwt_secret_at_least_32_characters
+COOKIE_SECRET=your_strong_cookie_secret_at_least_32_characters
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+ADMIN_EMAIL=admin@thenews.com
+ADMIN_PASSWORD=your_initial_admin_password
 ```
-*(Reference: `backend/.env.example`)*
 
-> **Security Note:** Real `.env` files are ignored by git and never committed to source control.
+### Frontend (`frontend/.env`)
+```bash
+VITE_API_BASE_URL=http://localhost:5000/api/v1
+```
+
+> **Security Note:** Usable secrets are never committed to the repository. The application enforces validation of required secrets at startup.
 
 ---
 
-## 5. Local Setup & Running
+## 4. Local Setup & Execution
 
 ### Prerequisites
-- **Node.js:** v18+ (tested on Node v24.18.0)
-- **MongoDB:** Local MongoDB instance running on `localhost:27017` or a MongoDB Atlas URI
+- **Node.js:** v18+ (tested on Node v20+)
+- **MongoDB:** Active MongoDB Atlas cluster or local MongoDB instance
 
-### Step 1: Backend Setup
+### Step 1: Backend
 ```bash
 cd backend
 npm install
 npm run build
-npm run dev      # Runs with tsx watcher on http://localhost:5000
-# or for production:
-npm start        # Runs compiled code from dist/server.js
+npm run dev        # Development mode with hot reload
+# or
+npm start          # Run compiled production server
 ```
 
 Verify backend health:
@@ -119,103 +108,64 @@ Verify backend health:
 curl http://localhost:5000/api/v1/health
 ```
 
-Expected JSON response:
-```json
-{
-  "success": true,
-  "message": "The News API is running",
-  "environment": "development",
-  "timestamp": "2026-09-30T...",
-  "database": {
-    "status": "connected",
-    "connected": true,
-    "name": "the_news"
-  }
-}
-```
-
-### Step 2: Frontend Setup
-In a new terminal:
+### Step 2: Frontend
 ```bash
 cd frontend
 npm install
-npm run dev      # Starts Vite dev server on http://localhost:5173
+npm run dev        # Starts Vite dev server on http://localhost:5173
 ```
 
-To verify production compilation:
+To build production bundles:
 ```bash
-npm run build    # Compiles TypeScript and builds production bundles in frontend/dist/
+npm run build      # Generates optimized output in frontend/dist/
 ```
 
 ---
 
-## 6. Frontend Routes Established in Phase 1
-
-### Public Newsroom Shell
-- `/` — Homepage (Breaking ticker, Hero story, Continuous Wire, Most Read, Desks showcase, Newsletter card)
-- `/category/:slug` — Desk view (Lead story, Article grid, Pagination foundation)
-- `/article/:slug` — Editorial article layout (Byline, Deck, Pull quotes, Verified badge, Tags, Reader discussion placeholder)
-- `/search` — Archive search (Query inputs, Desk filters, Result cards, Empty state, Pagination foundation)
-- `/login` — Journalist & subscriber login placeholder card
-- `/register` — Reader account registration placeholder
-- `/forgot-password` — Password recovery placeholder
-- `*` — Editorial 404 page
-
-### Admin CMS Shell
-- `/admin` — CMS Dashboard (Metric counters, Recent dispatches table, Most viewed dispatches, System health monitor, Activity audit)
-- `/admin/posts` — Articles & dispatches module shell
-- `/admin/posts/new` — Compose dispatch placeholder (TipTap editor slot)
-- `/admin/posts/bulk` — Batch ingestion placeholder
-- `/admin/media` — Media library placeholder
-- `/admin/categories` — Desk & taxonomy management shell
-- `/admin/tags` — Tagging management shell
-- `/admin/languages` — Multilingual localization shell
-- `/admin/comments` — Reader discussion moderation shell
-- `/admin/polls` — Editorial polling shell
-- `/admin/users` — Staff & subscriber accounts shell
-- `/admin/homepage` — Homepage layout curation shell
-- `/admin/homepage/featured` — Top stories curation shell
-- `/admin/homepage/breaking` — Breaking news ticker management shell
-- `/admin/homepage/sections` — Section reordering shell
-- `/admin/analytics` — Audience telemetry shell
-- `/admin/settings/general` — General publication settings
-- `/admin/settings/seo` — Search engine optimization settings
-- `/admin/settings/navigation` — Navigation architecture settings
-- `/admin/settings/social` — Syndication & social feeds settings
-- `/admin/settings/account` — Journalist profile settings
+## 5. Public Routes & Navigation
+- `/` — Curated Homepage (Breaking news bar, Hero story, Secondary stories, Latest wire, Desks, Trending)
+- `/latest` — Real-time chronological news feed
+- `/trending` — High-engagement stories (last 7 days by views, likes, comments)
+- `/videos` — Video format articles
+- `/category/:slug` — Category-specific news feed
+- `/article/:slug` — Full article page with engagement, related stories, and comments
+- `/search` — Live keyword and category search
+- `/saved` — Reader bookmarked articles (authenticated readers)
+- `/profile` — Reader profile & reading preferences
+- `/login` — User & administrator sign in
+- `/register` — Reader account registration
+- `/forgot-password` — Password assistance notice
 
 ---
 
-## 7. Reusable UI Primitives (`frontend/src/components/ui`)
-- `Button` (Primary, Secondary, Outline, Ghost, Destructive; sizes sm/md/lg; loading state)
-- `Input` & `Textarea` (Editorial labels, icons, error handling)
-- `Select` & `Checkbox` & `Switch` (Accessible form controls)
-- `Badge` (Category, Breaking pulse, Success, Warning, Outline)
-- `Card` (Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter)
-- `Modal` (Dialog with light dismiss, escape key close, backdrop blur)
-- `Dropdown` & `Tooltip` (Interactive overlays with keyboard/mouse support)
-- `Tabs` (Underline tabs with badge counters)
-- `Table` (Accessible responsive table with header, row, cell)
-- `Avatar` (Image with fallback initials and user icon)
-- `Skeleton` (Animated placeholders for text and containers)
-- `Alert` & `Toast` (Notification context and toast provider)
-- `Spinner` (Accessible SVG loader)
-- `EmptyState` & `ErrorState` (Illustrated fallback states with retry actions)
+## 6. Admin Editorial CMS Routes (Admin Only)
+- `/admin` — CMS Dashboard with real database metrics and recent posts
+- `/admin/posts` — Article catalog with filters, status badges, and edit/preview links
+- `/admin/posts/new` — Article composer (TipTap editor, featured/breaking toggles)
+- `/admin/posts/:id/edit` — Article editor
+- `/admin/posts/:id/preview` — Authenticated draft/scheduled article preview
+- `/admin/media` — Cloudinary media library
+- `/admin/categories` — Category management
+- `/admin/tags` — Tag management
+- `/admin/languages` — Language management
+- `/admin/users` — User account management
+- `/admin/comments` — Comment moderation (hide/delete reader comments)
 
 ---
 
-## 8. Dark Mode Implementation
-- Supported via Tailwind `class` mode.
-- Synchronized with `color-scheme` CSS property on `:root` and `html`.
-- Persisted in browser `localStorage` (`the_news_theme`).
-- Zero-flashing (FOUC) prevention script loaded inline in `index.html`.
-- Accessible toggles available in both Public and Admin navigation headers.
+## 7. Testing & Quality Verification
 
----
+Run backend integration test suite:
+```bash
+cd backend
+npm test
+```
 
-## 9. End-to-End System Diagnostic Indicator
-A live diagnostic pill (`API: Online (DB Connected)`) is embedded in both the public and admin navigation bars. Powered by TanStack Query, it continuously queries `GET /api/v1/health` and provides a click-to-view diagnostic modal detailing:
-- Backend Express API status
-- MongoDB connection state & database name
-- Server environment
-- Real-time timestamp & latency
+Run production type-checking and builds:
+```bash
+# Backend build verification
+cd backend && npm run build
+
+# Frontend build verification
+cd frontend && npm run build
+```

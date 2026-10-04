@@ -4,6 +4,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { apiClient } from '../services/apiClient';
 import { Bookmark, Trash2, Clock, BookOpen } from 'lucide-react';
+import { ArticleImagePlaceholder } from '../components/common/ArticleImagePlaceholder';
 
 export const SavedArticlesPage: React.FC = () => {
   const { user, isLoading: authLoading } = useAuth();
@@ -63,7 +64,7 @@ export const SavedArticlesPage: React.FC = () => {
         <div className="py-20 text-center">
           <BookOpen className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
           <h2 className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-1">
-            No saved articles yet
+            No saved articles yet.
           </h2>
           <p className="text-sm text-gray-400 max-w-sm mx-auto mb-6">
             Click the bookmark icon on any article across The News to save it here for later.
@@ -78,10 +79,7 @@ export const SavedArticlesPage: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {posts.map((post) => {
-            const imageUrl =
-              post.featuredImage?.url ||
-              post.images?.[0]?.url ||
-              'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=400&q=80';
+            const imageUrl = post.featuredImage?.url || post.images?.[0]?.url || '';
 
             const publishedDate = post.publishedAt
               ? new Date(post.publishedAt).toLocaleDateString([], {
@@ -98,11 +96,15 @@ export const SavedArticlesPage: React.FC = () => {
               >
                 <div className="flex items-center gap-4 flex-1 min-w-0">
                   <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800">
-                    <img
-                      src={imageUrl}
-                      alt={post.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={post.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    ) : (
+                      <ArticleImagePlaceholder category={post.category?.name} className="h-full aspect-square" />
+                    )}
                   </div>
 
                   <div className="flex-1 min-w-0 space-y-1">
@@ -111,11 +113,11 @@ export const SavedArticlesPage: React.FC = () => {
                         {post.category.name}
                       </span>
                     )}
-                    <h2 className="text-base sm:text-lg font-bold font-serif text-gray-900 dark:text-white truncate group-hover:text-primary-600 dark:group-hover:text-primary-400">
+                    <h2 className="text-base sm:text-lg font-bold font-serif text-gray-950 dark:text-white truncate group-hover:text-primary-600 dark:group-hover:text-primary-400">
                       <Link to={`/article/${post.slug}`}>{post.title}</Link>
                     </h2>
                     <div className="flex items-center gap-3 text-xs text-gray-400">
-                      <span>{post.author?.name || 'Staff Reporter'}</span>
+                      <span>{post.author?.name || 'The News'}</span>
                       <span>•</span>
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" /> {publishedDate}

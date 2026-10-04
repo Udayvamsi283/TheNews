@@ -10,14 +10,7 @@ import {
   Tag,
   Languages,
   MessageSquare,
-  BarChart3,
   Users,
-  Sparkles,
-  Zap,
-  Layers,
-  TrendingUp,
-  Settings,
-  Search as SearchIcon,
   Sun,
   Moon,
   ExternalLink,
@@ -50,27 +43,22 @@ export const AdminLayout: React.FC = () => {
 
   const navSections: NavSection[] = [
     {
-      title: 'DASHBOARD',
+      title: 'EDITORIAL',
       items: [
-        { label: 'Home', to: '/admin', icon: <LayoutDashboard className="w-4 h-4" /> }
+        { label: 'Dashboard', to: '/admin', icon: <LayoutDashboard className="w-4 h-4" /> },
+        { label: 'Articles', to: '/admin/posts', icon: <FileText className="w-4 h-4" /> },
+        { label: 'New Article', to: '/admin/posts/new', icon: <FilePlus className="w-4 h-4" /> },
+        { label: 'Bulk Import', to: '/admin/bulk-upload', icon: <UploadCloud className="w-4 h-4" /> }
       ]
     },
     {
-      title: 'CONTENT',
-      items: [
-        { label: 'Add Post', to: '/admin/posts/new', icon: <FilePlus className="w-4 h-4" /> },
-        { label: 'Posts', to: '/admin/posts', icon: <FileText className="w-4 h-4" /> },
-        { label: 'Bulk Upload', to: '/admin/bulk-upload', icon: <UploadCloud className="w-4 h-4" /> }
-      ]
-    },
-    {
-      title: 'MEDIA',
+      title: 'ASSETS',
       items: [
         { label: 'Media Library', to: '/admin/media', icon: <ImageIcon className="w-4 h-4" /> }
       ]
     },
     {
-      title: 'ORGANIZATION',
+      title: 'TAXONOMIES',
       items: [
         { label: 'Categories', to: '/admin/categories', icon: <FolderTree className="w-4 h-4" /> },
         { label: 'Tags', to: '/admin/tags', icon: <Tag className="w-4 h-4" /> },
@@ -78,35 +66,10 @@ export const AdminLayout: React.FC = () => {
       ]
     },
     {
-      title: 'ENGAGEMENT',
+      title: 'COMMUNITY',
       items: [
-        { label: 'Comments', to: '/admin/comments', icon: <MessageSquare className="w-4 h-4" /> },
-        { label: 'Polls', to: '/admin/polls', icon: <BarChart3 className="w-4 h-4" /> },
-        { label: 'Users', to: '/admin/users', icon: <Users className="w-4 h-4" /> }
-      ]
-    },
-    {
-      title: 'HOMEPAGE',
-      items: [
-        { label: 'Featured News', to: '/admin/homepage/featured', icon: <Sparkles className="w-4 h-4" /> },
-        { label: 'Breaking News', to: '/admin/homepage/breaking', icon: <Zap className="w-4 h-4" /> },
-        { label: 'Sections', to: '/admin/homepage/sections', icon: <Layers className="w-4 h-4" /> }
-      ]
-    },
-    {
-      title: 'ANALYTICS',
-      items: [
-        { label: 'Overview', to: '/admin/analytics', icon: <TrendingUp className="w-4 h-4" /> }
-      ]
-    },
-    {
-      title: 'SETTINGS',
-      items: [
-        { label: 'General', to: '/admin/settings/general', icon: <Settings className="w-4 h-4" /> },
-        { label: 'SEO', to: '/admin/settings/seo', icon: <SearchIcon className="w-4 h-4" /> },
-        { label: 'Navigation', to: '/admin/settings/navigation', icon: <Layers className="w-4 h-4" /> },
-        { label: 'Social Links', to: '/admin/settings/social', icon: <ExternalLink className="w-4 h-4" /> },
-        { label: 'Account', to: '/admin/settings/account', icon: <Users className="w-4 h-4" /> }
+        { label: 'Users', to: '/admin/users', icon: <Users className="w-4 h-4" /> },
+        { label: 'Comments', to: '/admin/comments', icon: <MessageSquare className="w-4 h-4" /> }
       ]
     }
   ];

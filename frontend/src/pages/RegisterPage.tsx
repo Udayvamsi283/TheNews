@@ -55,7 +55,7 @@ export const RegisterPage: React.FC = () => {
             Create Reader Account
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Join a global community supporting independent investigative journalism.
+            Create an account to save articles, participate in discussions, and customize reading preferences.
           </p>
         </div>
 

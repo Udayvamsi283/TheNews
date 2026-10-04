@@ -4,6 +4,8 @@ import { AuthRequest } from '../middleware/auth.middleware.js';
 import { Post, IPost, PostFormat } from '../models/post.model.js';
 import { Category } from '../models/category.model.js';
 import { Language } from '../models/language.model.js';
+import { User } from '../models/user.model.js';
+import { Comment } from '../models/comment.model.js';
 import { createPostSchema, updatePostSchema } from '../validators/post.validator.js';
 import { slugify } from '../utils/slugify.js';
 import { sanitizeArticleHtml } from '../utils/sanitize.js';
@@ -288,7 +290,7 @@ export const updatePost = async (req: AuthRequest, res: Response) => {
     // Update remaining allowed fields
     const directFields: (keyof typeof parsedData)[] = [
       'title', 'summary', 'category', 'tags', 'language', 'postFormat',
-      'featuredImage', 'images', 'isFullWidth', 'registeredOnly', 'externalUrl',
+      'featuredImage', 'images', 'isFullWidth', 'registeredOnly', 'isFeatured', 'isBreaking', 'externalUrl',
       'seo', 'faq', 'translations', 'galleryItems', 'sortedListItems',
       'videoDetails', 'audioDetails', 'pollDetails', 'eventDetails'
     ];
@@ -673,3 +675,77 @@ export const bulkUploadPosts = async (req: AuthRequest, res: Response) => {
     });
   }
 };
+
+/**
+ * GET /api/v1/posts/admin/stats (Real Admin Dashboard Statistics)
+ */
+export const getAdminDashboardStats = async (req: Request, res: Response) => {
+  try {
+    const [
+      totalPosts,
+      publishedPosts,
+      draftPosts,
+      scheduledPosts,
+      totalUsers,
+      totalComments,
+      viewsAggregation,
+      recentPosts,
+      recentlyUpdatedPosts,
+      mostViewedPosts
+    ] = await Promise.all([
+      Post.countDocuments({ status: { $ne: 'trashed' } }),
+      Post.countDocuments({ status: 'published' }),
+      Post.countDocuments({ status: 'draft' }),
+      Post.countDocuments({ status: 'scheduled' }),
+      User.countDocuments(),
+      Comment.countDocuments({ status: { $ne: 'deleted' } }),
+      Post.aggregate([
+        { $match: { status: 'published' } },
+        { $group: { _id: null, totalViews: { $sum: '$views' } } }
+      ]),
+      Post.find({ status: { $ne: 'trashed' } })
+        .sort({ createdAt: -1 })
+        .limit(6)
+        .populate('author', 'name email avatar')
+        .populate('category', 'name slug')
+        .select('title slug status postFormat views createdAt author category isFeatured isBreaking'),
+      Post.find({ status: { $ne: 'trashed' } })
+        .sort({ updatedAt: -1 })
+        .limit(5)
+        .populate('author', 'name')
+        .select('title slug status updatedAt author'),
+      Post.find({ status: 'published' })
+        .sort({ views: -1 })
+        .limit(5)
+        .populate('category', 'name slug')
+        .select('title slug views category publishedAt')
+    ]);
+
+    const totalViews = viewsAggregation[0]?.totalViews || 0;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        counts: {
+          totalPosts,
+          published: publishedPosts,
+          drafts: draftPosts,
+          scheduled: scheduledPosts,
+          users: totalUsers,
+          comments: totalComments,
+          views: totalViews
+        },
+        recentPosts,
+        recentlyUpdated: recentlyUpdatedPosts,
+        mostViewed: mostViewedPosts
+      }
+    });
+  } catch (error: any) {
+    logger.error('Failed to get dashboard stats:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve dashboard statistics'
+    });
+  }
+};
+

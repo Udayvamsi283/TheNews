@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Category, Post } from '../../types';
 import { ArrowRight, Clock, Lock } from 'lucide-react';
+import { ArticleImagePlaceholder } from '../common/ArticleImagePlaceholder';
 
 interface CategorySectionProps {
   category: Category;
@@ -30,10 +31,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({ category, post
       {/* Posts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {posts.slice(0, 6).map((post) => {
-          const imageUrl =
-            post.featuredImage?.url ||
-            post.images?.[0]?.url ||
-            'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=600&q=80';
+          const imageUrl = post.featuredImage?.url || post.images?.[0]?.url || '';
 
           const publishedDate = post.publishedAt
             ? new Date(post.publishedAt).toLocaleDateString(undefined, {
@@ -49,12 +47,16 @@ export const CategorySection: React.FC<CategorySectionProps> = ({ category, post
             >
               <div>
                 <div className="relative aspect-[16/10] overflow-hidden bg-gray-100 dark:bg-gray-800">
-                  <img
-                    src={imageUrl}
-                    alt={post.featuredImage?.alt || post.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-                    loading="lazy"
-                  />
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt={post.featuredImage?.alt || post.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <ArticleImagePlaceholder category={category.name} className="h-full aspect-[16/10]" />
+                  )}
                   {post.registeredOnly && (
                     <div className="absolute top-3 left-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-900/85 backdrop-blur text-amber-300 border border-amber-400/20">
                       <Lock className="w-3 h-3" /> Exclusive
@@ -84,7 +86,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({ category, post
 
               <div className="px-5 pb-5 pt-0 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 border-t border-gray-50 dark:border-gray-800/40">
                 <span className="font-medium text-gray-600 dark:text-gray-400 truncate max-w-[140px]">
-                  {post.author?.name || 'Staff Reporter'}
+                  {post.author?.name || 'The News'}
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="w-3 h-3" />

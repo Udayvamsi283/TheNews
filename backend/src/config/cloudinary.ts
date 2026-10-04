@@ -44,23 +44,7 @@ export const uploadToCloudinary = (
 ): Promise<CloudinaryUploadResult> => {
   return new Promise((resolve, reject) => {
     if (!isCloudinaryConfigured) {
-      if (env.NODE_ENV === 'production') {
-        return reject(new Error('Server configuration error: Cloudinary credentials are missing in production.'));
-      }
-      // Graceful fallback strictly isolated for local development without active Cloudinary account
-      const mockId = `local_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-      const mockUrl = `https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=1200&q=80`;
-      logger.info(`[Fallback Media] Simulated upload for asset: ${mockId}`);
-      return resolve({
-        publicId: `${options.folder || 'the-news/images'}/${mockId}`,
-        url: mockUrl,
-        secureUrl: mockUrl,
-        resourceType: options.resourceType || 'image',
-        format: 'jpg',
-        width: 1200,
-        height: 800,
-        bytes: buffer.length
-      });
+      return reject(new Error('Cloudinary service is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in the environment.'));
     }
 
     const uploadStream = cloudinary.uploader.upload_stream(
@@ -102,11 +86,7 @@ export const deleteFromCloudinary = async (
   resourceType: 'image' | 'video' | 'raw' = 'image'
 ): Promise<boolean> => {
   if (!isCloudinaryConfigured) {
-    if (env.NODE_ENV === 'production') {
-      throw new Error('Server configuration error: Cloudinary credentials are missing in production.');
-    }
-    logger.info(`[Fallback Media] Simulated deletion for asset: ${publicId}`);
-    return true;
+    throw new Error('Cloudinary service is not configured.');
   }
 
   try {

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { apiClient } from '../services/apiClient';
 import { Flame, Eye, Heart, MessageSquare, Clock } from 'lucide-react';
+import { ArticleImagePlaceholder } from '../components/common/ArticleImagePlaceholder';
 
 export const TrendingPage: React.FC = () => {
   const { data: posts = [], isLoading } = useQuery({
@@ -33,17 +34,14 @@ export const TrendingPage: React.FC = () => {
           ))}
         </div>
       ) : posts.length === 0 ? (
-        <div className="py-16 text-center text-gray-400 font-medium">
-          No trending stories found in the past 7 days.
+        <div className="py-20 text-center text-gray-400 font-medium">
+          Trending stories will appear here once articles receive readership.
         </div>
       ) : (
         <div className="space-y-6">
           {posts.map((post, index) => {
             const rank = index + 1;
-            const imageUrl =
-              post.featuredImage?.url ||
-              post.images?.[0]?.url ||
-              'https://images.unsplash.com/photo-1495020689067-958852a7765e?w=800&q=80';
+            const imageUrl = post.featuredImage?.url || post.images?.[0]?.url || '';
 
             const publishedDate = post.publishedAt
               ? new Date(post.publishedAt).toLocaleDateString(undefined, {
@@ -64,12 +62,16 @@ export const TrendingPage: React.FC = () => {
 
                 {/* Thumbnail */}
                 <div className="w-full sm:w-48 h-36 flex-shrink-0 rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 relative">
-                  <img
-                    src={imageUrl}
-                    alt={post.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    loading="lazy"
-                  />
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt={post.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <ArticleImagePlaceholder category={post.category?.name} className="h-full aspect-[4/3]" />
+                  )}
                   {post.category && (
                     <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-black/70 backdrop-blur text-white">
                       {post.category.name}
@@ -92,7 +94,7 @@ export const TrendingPage: React.FC = () => {
                   <div className="pt-2 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-400 dark:text-gray-500">
                     <div className="flex items-center gap-3">
                       <span className="font-medium text-gray-700 dark:text-gray-300">
-                        {post.author?.name || 'Editorial Desk'}
+                        {post.author?.name || 'The News'}
                       </span>
                       <span>•</span>
                       <span className="flex items-center gap-1">
@@ -108,12 +110,12 @@ export const TrendingPage: React.FC = () => {
                       )}
                       {typeof post.likeCount === 'number' && (
                         <span className="flex items-center gap-1 font-medium">
-                          <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" /> {post.likeCount.toLocaleString()}
+                          <Heart className="w-3.5 h-3.5 text-rose-500" /> {post.likeCount}
                         </span>
                       )}
                       {typeof post.commentCount === 'number' && (
                         <span className="flex items-center gap-1 font-medium">
-                          <MessageSquare className="w-3.5 h-3.5 text-emerald-500" /> {post.commentCount.toLocaleString()}
+                          <MessageSquare className="w-3.5 h-3.5 text-purple-500" /> {post.commentCount}
                         </span>
                       )}
                     </div>

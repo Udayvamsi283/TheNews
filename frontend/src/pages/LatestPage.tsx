@@ -26,10 +26,10 @@ export const LatestPage: React.FC = () => {
             <span>Chronological News Wire</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-black font-serif text-gray-950 dark:text-white">
-            Latest Dispatches
+            Latest News
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Real-time reporting and continuous coverage from correspondents worldwide.
+            Continuous coverage and reporting.
           </p>
         </div>
 
@@ -58,8 +58,8 @@ export const LatestPage: React.FC = () => {
           ))}
         </div>
       ) : posts.length === 0 ? (
-        <div className="py-16 text-center text-gray-400 font-medium">
-          No published dispatches available right now.
+        <div className="py-20 text-center text-gray-400 font-medium">
+          No published articles yet.
         </div>
       ) : (
         <div className="relative border-l-2 border-gray-200 dark:border-gray-800 ml-4 sm:ml-6 pl-6 sm:pl-8 space-y-8">
@@ -117,7 +117,7 @@ export const LatestPage: React.FC = () => {
                 )}
 
                 <div className="mt-2 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-3">
-                  <span>By {post.author?.name || 'Staff Correspondent'}</span>
+                  <span>By {post.author?.name || 'The News'}</span>
                   <span>•</span>
                   <Link
                     to={`/article/${post.slug}`}

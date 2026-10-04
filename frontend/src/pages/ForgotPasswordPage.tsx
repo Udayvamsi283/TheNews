@@ -1,27 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { Input } from '../components/ui/Input';
-import { Button } from '../components/ui/Button';
-import { ShieldCheck, Mail, ArrowLeft, Send } from 'lucide-react';
-import { useToast } from '../components/ui/Toast';
+import { ArrowLeft, KeyRound } from 'lucide-react';
 
 export const ForgotPasswordPage: React.FC = () => {
-  const { showToast } = useToast();
-  const [email, setEmail] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitted(true);
-    showToast(
-      'Password recovery emails will be integrated with Resend in a future phase.',
-      'info',
-      'Phase 1 Notice'
-    );
-  };
-
   return (
-    <div className="max-w-md mx-auto py-8 sm:py-12">
+    <div className="max-w-md mx-auto py-8 sm:py-16">
       <div className="bg-white dark:bg-navy-850 p-6 sm:p-8 rounded border border-slate-200 dark:border-navy-700 shadow-sm space-y-6">
         <div className="text-center space-y-2">
           <Link to="/" className="inline-flex items-baseline gap-1 focus:outline-none">
@@ -31,44 +14,19 @@ export const ForgotPasswordPage: React.FC = () => {
             <span className="w-2 h-2 rounded-full bg-editorial-red inline-block" />
           </Link>
           <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Reset Password
+            Password Assistance
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Enter your verified journalist or subscriber email to receive a secure recovery link.
+        </div>
+
+        <div className="p-4 rounded bg-slate-50 dark:bg-navy-900 border border-slate-200 dark:border-navy-750 text-xs text-slate-600 dark:text-slate-300 space-y-3">
+          <div className="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-200">
+            <KeyRound className="w-4 h-4 text-editorial-red shrink-0" />
+            <span>Account Recovery</span>
+          </div>
+          <p className="leading-relaxed">
+            Automated password reset is currently unavailable. Please contact the system administrator to reset your credentials.
           </p>
         </div>
-
-        <div className="p-3 rounded bg-slate-50 dark:bg-navy-900 border border-slate-200 dark:border-navy-750 text-xs text-slate-600 dark:text-slate-400 flex items-start gap-2">
-          <ShieldCheck className="w-4 h-4 text-editorial-red shrink-0 mt-0.5" />
-          <div>
-            <strong>Phase 5 Scope:</strong> Transactional email delivery (Resend) will be integrated in Phase 5.
-          </div>
-        </div>
-
-        {!submitted ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              label="Workstation Email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="journalist@thenews.org"
-              leftIcon={<Mail className="w-4 h-4" />}
-            />
-
-            <Button type="submit" className="w-full" rightIcon={<Send className="w-4 h-4" />}>
-              Send Recovery Link (Preview)
-            </Button>
-          </form>
-        ) : (
-          <div className="p-4 rounded bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 text-xs space-y-2">
-            <div className="font-semibold text-sm">Recovery dispatch initiated</div>
-            <div>
-              In future phases, an encrypted recovery dispatch will be delivered to <strong>{email}</strong>.
-            </div>
-          </div>
-        )}
 
         <div className="pt-4 border-t border-slate-100 dark:border-navy-750 text-center text-xs">
           <Link

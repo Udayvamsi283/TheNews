@@ -182,6 +182,8 @@ export interface Post {
   scheduledAt?: string;
   isFullWidth?: boolean;
   registeredOnly?: boolean;
+  isFeatured?: boolean;
+  isBreaking?: boolean;
   externalUrl?: string;
   seo?: SeoMetadata;
   faq?: FaqItem[];
@@ -206,10 +208,11 @@ export interface Post {
 
 export interface Comment {
   _id: string;
-  post: string;
+  post: string | { _id: string; title: string; slug: string };
   user: {
     _id: string;
     name: string;
+    email?: string;
     avatar?: string;
     role: string;
   };

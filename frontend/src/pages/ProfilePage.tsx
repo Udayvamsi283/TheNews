@@ -173,7 +173,7 @@ export const ProfilePage: React.FC = () => {
                 label="Email Address"
                 value={user.email}
                 disabled
-                helperText="Email cannot be changed directly in this phase."
+                helperText="Email address cannot be changed."
                 leftIcon={<Mail className="w-4 h-4" />}
               />
 

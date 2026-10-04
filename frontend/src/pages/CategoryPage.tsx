@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../services/apiClient';
 import { Layers, Clock, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArticleImagePlaceholder } from '../components/common/ArticleImagePlaceholder';
 import { NotFoundPage } from './NotFoundPage';
 
 export const CategoryPage: React.FC = () => {
@@ -64,7 +65,7 @@ export const CategoryPage: React.FC = () => {
         </div>
       ) : posts.length === 0 ? (
         <div className="py-20 text-center text-gray-400 font-medium">
-          No articles currently published in this section.
+          No articles in this category yet.
         </div>
       ) : (
         <>
@@ -73,15 +74,15 @@ export const CategoryPage: React.FC = () => {
             <article className="group rounded-3xl overflow-hidden bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-all">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
                 <div className="lg:col-span-7 aspect-[16/10] overflow-hidden bg-gray-100 dark:bg-gray-800 relative">
-                  <img
-                    src={
-                      leadStory.featuredImage?.url ||
-                      leadStory.images?.[0]?.url ||
-                      'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1000&q=80'
-                    }
-                    alt={leadStory.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
+                  {(leadStory.featuredImage?.url || leadStory.images?.[0]?.url) ? (
+                    <img
+                      src={leadStory.featuredImage?.url || leadStory.images?.[0]?.url}
+                      alt={leadStory.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <ArticleImagePlaceholder category={category?.name} className="h-full aspect-[16/10]" />
+                  )}
                   {leadStory.registeredOnly && (
                     <div className="absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-900/85 backdrop-blur text-amber-300">
                       <Lock className="w-3 h-3 inline mr-1" /> Exclusive
@@ -92,7 +93,7 @@ export const CategoryPage: React.FC = () => {
                 <div className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-between">
                   <div className="space-y-3">
                     <span className="text-xs font-bold uppercase tracking-wider text-primary-600 dark:text-primary-400">
-                      Desk Top Story
+                      Top Story
                     </span>
                     <h2 className="text-2xl sm:text-3xl font-bold font-serif text-gray-950 dark:text-white group-hover:text-primary-600 transition-colors leading-tight">
                       <Link to={`/article/${leadStory.slug}`}>{leadStory.title}</Link>
@@ -105,7 +106,7 @@ export const CategoryPage: React.FC = () => {
                   </div>
 
                   <div className="pt-4 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-400 flex items-center justify-between">
-                    <span>{leadStory.author?.name || 'Staff Reporter'}</span>
+                    <span>{leadStory.author?.name || 'The News'}</span>
                     {leadStory.publishedAt && (
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
@@ -124,50 +125,53 @@ export const CategoryPage: React.FC = () => {
           {/* Additional Beat Stories */}
           {gridStories.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {gridStories.map((post) => (
-                <article
-                  key={post._id}
-                  className="group flex flex-col justify-between rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden hover:shadow-md transition-all"
-                >
-                  <div>
-                    <div className="aspect-[16/10] overflow-hidden bg-gray-100 dark:bg-gray-800 relative">
-                      <img
-                        src={
-                          post.featuredImage?.url ||
-                          post.images?.[0]?.url ||
-                          'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=600&q=80'
-                        }
-                        alt={post.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        loading="lazy"
-                      />
-                      {post.registeredOnly && (
-                        <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-900/80 text-amber-300">
-                          <Lock className="w-2.5 h-2.5 inline mr-1" /> Exclusive
-                        </div>
-                      )}
+              {gridStories.map((post) => {
+                const imgUrl = post.featuredImage?.url || post.images?.[0]?.url;
+                return (
+                  <article
+                    key={post._id}
+                    className="group flex flex-col justify-between rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden hover:shadow-md transition-all"
+                  >
+                    <div>
+                      <div className="aspect-[16/10] overflow-hidden bg-gray-100 dark:bg-gray-800 relative">
+                        {imgUrl ? (
+                          <img
+                            src={imgUrl}
+                            alt={post.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <ArticleImagePlaceholder category={category?.name} className="h-full aspect-[16/10]" />
+                        )}
+                        {post.registeredOnly && (
+                          <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-900/80 text-amber-300">
+                            <Lock className="w-2.5 h-2.5 inline mr-1" /> Exclusive
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-5">
+                        <h3 className="text-base sm:text-lg font-bold font-serif text-gray-950 dark:text-white group-hover:text-primary-600 transition-colors line-clamp-2 leading-snug">
+                          <Link to={`/article/${post.slug}`}>{post.title}</Link>
+                        </h3>
+                        {post.summary && (
+                          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
+                            {post.summary}
+                          </p>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="p-5">
-                      <h3 className="text-base sm:text-lg font-bold font-serif text-gray-950 dark:text-white group-hover:text-primary-600 transition-colors line-clamp-2 leading-snug">
-                        <Link to={`/article/${post.slug}`}>{post.title}</Link>
-                      </h3>
-                      {post.summary && (
-                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
-                          {post.summary}
-                        </p>
+                    <div className="px-5 pb-4 pt-0 text-xs text-gray-400 flex items-center justify-between border-t border-gray-50 dark:border-gray-800/40">
+                      <span>{post.author?.name || 'The News'}</span>
+                      {post.publishedAt && (
+                        <span>{new Date(post.publishedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
                       )}
                     </div>
-                  </div>
-
-                  <div className="px-5 pb-4 pt-0 text-xs text-gray-400 flex items-center justify-between border-t border-gray-50 dark:border-gray-800/40">
-                    <span>{post.author?.name || 'Staff Reporter'}</span>
-                    {post.publishedAt && (
-                      <span>{new Date(post.publishedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
-                    )}
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           )}
 

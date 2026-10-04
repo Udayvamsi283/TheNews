@@ -472,7 +472,7 @@ class ApiClient {
   }
 
   // ==========================================
-  // PHASE 4 PUBLIC DISCOVERY & ENGAGEMENT API
+  // Public Discovery & Engagement API
   // ==========================================
 
   public async getHomepageData(): Promise<HomepageData> {
@@ -695,6 +695,45 @@ class ApiClient {
     }>('/users/me/preferences', {
       method: 'PATCH',
       body: JSON.stringify(data)
+    });
+    return res.data;
+  }
+
+  public async getAdminDashboardStats(): Promise<any> {
+    const res = await this.request<{
+      success: boolean;
+      data: any;
+    }>('/posts/admin/stats');
+    return res.data;
+  }
+
+  public async getAdminComments(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }): Promise<{ comments: Comment[]; pagination: Pagination }> {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', params.page.toString());
+    if (params?.limit) query.set('limit', params.limit.toString());
+    if (params?.status) query.set('status', params.status);
+    const res = await this.request<{
+      success: boolean;
+      data: { comments: Comment[]; pagination: Pagination };
+    }>(`/engagement/admin/comments${query.toString() ? `?${query.toString()}` : ''}`);
+    return res.data;
+  }
+
+  public async updateAdminCommentStatus(
+    id: string,
+    status: 'visible' | 'hidden' | 'deleted'
+  ): Promise<Comment> {
+    const res = await this.request<{
+      success: boolean;
+      message: string;
+      data: Comment;
+    }>(`/engagement/admin/comments/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
     });
     return res.data;
   }
