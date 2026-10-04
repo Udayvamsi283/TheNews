@@ -23,16 +23,19 @@ import { PollRenderer } from '../components/public/format-renderers/PollRenderer
 import { EventRenderer } from '../components/public/format-renderers/EventRenderer';
 import { updateSeoMetadata } from '../utils/seo';
 import { useToast } from '../components/ui/Toast';
+import { useLanguage } from '../context/LanguageContext';
 
 export const ArticlePage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const lang = searchParams.get('lang') || undefined;
+  const { currentLanguage, t, getCategoryName } = useLanguage();
+  const explicitLang = searchParams.get('lang');
+  const effectiveLang = explicitLang || currentLanguage;
   const { showToast } = useToast();
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['public', 'post', slug, lang],
-    queryFn: () => apiClient.getPostBySlug(slug!, lang),
+    queryKey: ['public', 'post', slug, effectiveLang],
+    queryFn: () => apiClient.getPostBySlug(slug!, effectiveLang),
     enabled: !!slug
   });
 
@@ -138,7 +141,7 @@ export const ArticlePage: React.FC = () => {
         <nav aria-label="Breadcrumbs" className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
           <Link to="/" className="hover:text-gray-900 dark:hover:text-white flex items-center gap-1">
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Home</span>
+            <span>{t('home')}</span>
           </Link>
           <ChevronRight className="w-3 h-3 text-gray-300" />
           {post.category && (
@@ -146,7 +149,7 @@ export const ArticlePage: React.FC = () => {
               to={`/category/${post.category.slug}`}
               className="font-semibold text-primary-600 dark:text-primary-400 hover:underline uppercase tracking-wider"
             >
-              {post.category.name}
+              {getCategoryName(post.category.slug, post.category.name)}
             </Link>
           )}
         </nav>
@@ -158,9 +161,9 @@ export const ArticlePage: React.FC = () => {
             <span className="text-gray-400">Language:</span>
             <button
               type="button"
-              onClick={() => handleLanguageChange('')}
+              onClick={() => handleLanguageChange('en')}
               className={`px-2 py-0.5 rounded font-bold uppercase transition-colors ${
-                !lang || lang === 'en'
+                effectiveLang === 'en'
                   ? 'bg-primary-600 text-white'
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
               }`}
@@ -173,7 +176,7 @@ export const ArticlePage: React.FC = () => {
                 type="button"
                 onClick={() => handleLanguageChange(tr.languageCode)}
                 className={`px-2 py-0.5 rounded font-bold uppercase transition-colors ${
-                  lang === tr.languageCode
+                  effectiveLang === tr.languageCode
                     ? 'bg-primary-600 text-white'
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
@@ -355,7 +358,7 @@ export const ArticlePage: React.FC = () => {
             {/* Default Article Content / Additional Prose */}
             {post.content && post.postFormat !== 'table_of_contents' && (
               <div
-                className="prose dark:prose-invert max-w-none prose-lg font-serif text-gray-800 dark:text-gray-200 leading-relaxed pt-2"
+                className="article-content-body prose dark:prose-invert max-w-none prose-lg font-serif text-gray-800 dark:text-gray-200 leading-relaxed pt-2"
                 dangerouslySetInnerHTML={{ __html: post.content }}
               />
             )}

@@ -8,9 +8,11 @@ import { CategorySection } from '../components/public/CategorySection';
 import { ArticleImagePlaceholder } from '../components/common/ArticleImagePlaceholder';
 import { Flame, Clock, Radio, ArrowRight, Lock, Newspaper } from 'lucide-react';
 import { updateSeoMetadata } from '../utils/seo';
+import { useLanguage } from '../context/LanguageContext';
 
 export const HomePage: React.FC = () => {
   const [feedFilter, setFeedFilter] = useState<'for-you' | 'all'>('for-you');
+  const { currentLanguage } = useLanguage();
 
   // Dynamic SEO metadata
   useEffect(() => {
@@ -23,20 +25,20 @@ export const HomePage: React.FC = () => {
 
   // Fetch Homepage Curation from backend
   const { data: homeData, isLoading: homeLoading } = useQuery({
-    queryKey: ['public', 'home'],
-    queryFn: () => apiClient.getHomepageData()
+    queryKey: ['public', 'home', currentLanguage],
+    queryFn: () => apiClient.getHomepageData({ lang: currentLanguage })
   });
 
   // Fetch Continuous wire feed
   const { data: feedData } = useQuery({
-    queryKey: ['public', 'feed', feedFilter],
-    queryFn: () => apiClient.getFeed({ limit: 8 })
+    queryKey: ['public', 'feed', feedFilter, currentLanguage],
+    queryFn: () => apiClient.getFeed({ limit: 8, language: currentLanguage })
   });
 
   // Fetch Trending stories (7-day window)
   const { data: trendingPosts = [] } = useQuery({
-    queryKey: ['public', 'trending'],
-    queryFn: () => apiClient.getTrendingPosts({ limit: 5 })
+    queryKey: ['public', 'trending', currentLanguage],
+    queryFn: () => apiClient.getTrendingPosts({ limit: 5, lang: currentLanguage })
   });
 
   if (homeLoading && !homeData) {

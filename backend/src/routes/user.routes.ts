@@ -9,7 +9,7 @@ import {
   updateUser,
   deleteUser
 } from '../controllers/user.controller.js';
-import { getUserBookmarks } from '../controllers/engagement.controller.js';
+import { getUserBookmarks, getUserLikes } from '../controllers/engagement.controller.js';
 import { authenticate, requireRole } from '../middleware/auth.middleware.js';
 
 const router = Router();
@@ -19,6 +19,7 @@ router.get('/me', authenticate, getProfile);
 router.patch('/me', authenticate, updateProfile);
 router.patch('/me/preferences', authenticate, updatePreferences);
 router.get('/me/bookmarks', authenticate, getUserBookmarks);
+router.get('/me/likes', authenticate, getUserLikes);
 router.post('/me/change-password', authenticate, changePassword);
 
 // Admin-only user management routes

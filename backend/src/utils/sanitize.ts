@@ -11,7 +11,8 @@ export const sanitizeArticleHtml = (dirtyHtml: string): string => {
       'ul', 'ol', 'li',
       'blockquote', 'pre', 'code',
       'a', 'img',
-      'table', 'thead', 'tbody', 'tr', 'th', 'td',
+      'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+      'colgroup', 'col',
       'figure', 'figcaption',
       'div', 'span',
       'iframe'
@@ -23,6 +24,10 @@ export const sanitizeArticleHtml = (dirtyHtml: string): string => {
         'src', 'width', 'height', 'frameborder',
         'allow', 'allowfullscreen', 'title', 'class'
       ],
+      th: ['colspan', 'rowspan', 'colwidth', 'scope', 'class', 'style'],
+      td: ['colspan', 'rowspan', 'colwidth', 'class', 'style'],
+      col: ['width', 'style', 'class'],
+      colgroup: ['class', 'style'],
       '*': ['class', 'style', 'id', 'data-*']
     },
     allowedIframeHostnames: [

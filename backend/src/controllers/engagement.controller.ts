@@ -186,6 +186,51 @@ export const getUserBookmarks = async (req: AuthenticatedRequest, res: Response,
   }
 };
 
+export const getUserLikes = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user!._id;
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 12, 50);
+    const skip = (page - 1) * limit;
+
+    const [total, likes] = await Promise.all([
+      Like.countDocuments({ user: userId }),
+      Like.find({ user: userId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: 'post',
+          select: 'title slug summary featuredImage category language publishedAt postFormat readingTime views likeCount commentCount',
+          populate: [
+            { path: 'category', select: 'name slug' },
+            { path: 'language', select: 'name code' }
+          ]
+        })
+    ]);
+
+    // Filter out posts that may have been trashed or unpublished
+    const activePosts = likes
+      .map((l) => l.post)
+      .filter((p) => Boolean(p));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        likes: activePosts,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ==========================================
 // 3. COMMENTS & MODERATION (Invariants preserved)
 // ==========================================

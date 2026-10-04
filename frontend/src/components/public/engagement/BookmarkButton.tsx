@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../../hooks/useAuth';
 import { apiClient } from '../../../services/apiClient';
 import { Bookmark } from 'lucide-react';
@@ -16,9 +17,14 @@ export const BookmarkButton: React.FC<BookmarkButtonProps> = ({
   size = 'md'
 }) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [isBookmarked, setIsBookmarked] = useState<boolean>(initialIsBookmarked);
   const [loading, setLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    setIsBookmarked(Boolean(initialIsBookmarked));
+  }, [initialIsBookmarked]);
 
   const handleToggleBookmark = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -42,6 +48,8 @@ export const BookmarkButton: React.FC<BookmarkButtonProps> = ({
       } else {
         await apiClient.removeBookmark(postId);
       }
+      queryClient.invalidateQueries({ queryKey: ['public', 'post'] });
+      queryClient.invalidateQueries({ queryKey: ['user', 'bookmarks'] });
     } catch {
       setIsBookmarked(prevBookmarked);
     } finally {

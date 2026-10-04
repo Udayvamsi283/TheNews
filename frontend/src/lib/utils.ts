@@ -36,3 +36,17 @@ export function slugify(text: string): string {
     .replace(/^-+/, '')
     .replace(/-+$/, '');
 }
+
+export function isArticleContentEmpty(html?: string | null): boolean {
+  if (!html) return true;
+  // If content contains an image, table, iframe, or audio/video embed, it is not empty
+  if (/<(img|table|iframe|video|audio)[^>]*>/i.test(html)) {
+    return false;
+  }
+  // Strip tags and whitespace/entities
+  const stripped = html
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .trim();
+  return stripped.length === 0;
+}

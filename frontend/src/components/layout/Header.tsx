@@ -1,35 +1,23 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Sun, Moon, Globe, User, Menu, X, ShieldCheck, LogOut, Settings, Bookmark } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../hooks/useAuth';
-import { apiClient } from '../../services/apiClient';
 import { Navbar } from './Navbar';
 import { Dropdown } from '../ui/Dropdown';
 import { Avatar } from '../ui/Avatar';
 
+import { useLanguage } from '../../context/LanguageContext';
+import { Heart } from 'lucide-react';
+
 export const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { currentLanguage, setLanguage, availableLanguages, t } = useLanguage();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState('English');
 
-  // Fetch languages dynamically from backend CMS
-  const { data: languagesData } = useQuery({
-    queryKey: ['languages'],
-    queryFn: () => apiClient.getLanguages(),
-    staleTime: 5 * 60 * 1000
-  });
-
-  const availableLanguages = languagesData && languagesData.length > 0
-    ? languagesData.filter((l) => l.status === 'active')
-    : [
-        { code: 'en', name: 'English', isDefault: true },
-        { code: 'te', name: 'Telugu', isDefault: false },
-        { code: 'hi', name: 'Hindi', isDefault: false }
-      ];
+  const activeLangObj = availableLanguages.find((l) => l.code === currentLanguage) || availableLanguages[0];
 
   const currentDate = new Intl.DateTimeFormat('en-US', {
     weekday: 'long',
@@ -39,8 +27,8 @@ export const Header: React.FC = () => {
   }).format(new Date());
 
   const languageItems = availableLanguages.map((lang) => ({
-    label: lang.name,
-    onClick: () => setSelectedLanguage(lang.name)
+    label: `${lang.nativeName} (${lang.name})`,
+    onClick: () => setLanguage(lang.code)
   }));
 
   const handleLogout = async () => {
@@ -50,31 +38,36 @@ export const Header: React.FC = () => {
 
   const userMenuItems = [
     {
-      label: 'My Profile',
+      label: t('profile'),
       icon: <User className="w-4 h-4 text-slate-500" />,
       onClick: () => navigate('/profile')
     },
     {
-      label: 'Saved Articles',
+      label: t('saved'),
       icon: <Bookmark className="w-4 h-4 text-slate-500" />,
       onClick: () => navigate('/saved')
     },
     {
-      label: 'Reading Preferences',
+      label: t('liked'),
+      icon: <Heart className="w-4 h-4 text-rose-500" />,
+      onClick: () => navigate('/liked')
+    },
+    {
+      label: t('preferences'),
       icon: <Settings className="w-4 h-4 text-slate-500" />,
       onClick: () => navigate('/settings')
     },
     ...(isAdmin
       ? [
           {
-            label: 'Admin Console',
+            label: t('admin'),
             icon: <ShieldCheck className="w-4 h-4 text-editorial-red" />,
             onClick: () => navigate('/admin')
           }
         ]
       : []),
     {
-      label: 'Sign Out',
+      label: t('signOut'),
       icon: <LogOut className="w-4 h-4 text-slate-500" />,
       onClick: handleLogout
     }
@@ -105,7 +98,7 @@ export const Header: React.FC = () => {
                   aria-label="Select language"
                 >
                   <Globe className="w-3.5 h-3.5" />
-                  <span className="text-xs font-medium hidden sm:inline">{selectedLanguage}</span>
+                  <span className="text-xs font-medium hidden sm:inline">{activeLangObj.nativeName}</span>
                 </button>
               }
               items={languageItems}

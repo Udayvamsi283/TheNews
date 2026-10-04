@@ -5,12 +5,18 @@ import { apiClient } from '../services/apiClient';
 import { Flame, Eye, Heart, MessageSquare, Clock } from 'lucide-react';
 import { ArticleImagePlaceholder } from '../components/common/ArticleImagePlaceholder';
 
+import { Post } from '../types';
+import { useLanguage } from '../context/LanguageContext';
+
 export const TrendingPage: React.FC = () => {
+  const { currentLanguage, t } = useLanguage();
   const { data: posts = [], isLoading } = useQuery({
-    queryKey: ['public', 'trending'],
-    queryFn: () => apiClient.getTrendingPosts({ limit: 12 }),
+    queryKey: ['public', 'trending', currentLanguage],
+    queryFn: () => apiClient.getTrendingPosts({ limit: 12, lang: currentLanguage }),
     staleTime: 60000
   });
+
+  const postList: Post[] = Array.isArray(posts) ? posts : (posts as any)?.posts || [];
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -20,7 +26,7 @@ export const TrendingPage: React.FC = () => {
           <span>Past 7 Days Highlights</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-black font-serif text-gray-950 dark:text-white">
-          Trending Stories
+          {t('trending')} Stories
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           The most engaged and widely discussed journalism published over the last week.
@@ -33,13 +39,13 @@ export const TrendingPage: React.FC = () => {
             <div key={i} className="animate-pulse h-64 bg-gray-100 dark:bg-gray-900 rounded-2xl" />
           ))}
         </div>
-      ) : posts.length === 0 ? (
+      ) : postList.length === 0 ? (
         <div className="py-20 text-center text-gray-400 font-medium">
           Trending stories will appear here once articles receive readership.
         </div>
       ) : (
         <div className="space-y-6">
-          {posts.map((post, index) => {
+          {postList.map((post: Post, index: number) => {
             const rank = index + 1;
             const imageUrl = post.featuredImage?.url || post.images?.[0]?.url || '';
 

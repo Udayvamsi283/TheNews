@@ -5,6 +5,8 @@ import { apiClient } from '../../services/apiClient';
 import { cn } from '../../lib/utils';
 import { Flame, Radio, Film } from 'lucide-react';
 
+import { useLanguage } from '../../context/LanguageContext';
+
 export interface NavbarProps {
   className?: string;
   onItemClick?: () => void;
@@ -17,6 +19,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   orientation = 'horizontal'
 }) => {
   const isHorizontal = orientation === 'horizontal';
+  const { t, getCategoryName } = useLanguage();
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
@@ -46,22 +49,22 @@ export const Navbar: React.FC<NavbarProps> = ({
     >
       <div className={cn(isHorizontal ? 'flex items-center space-x-1 sm:space-x-1.5' : 'flex flex-col space-y-1')}>
         <NavLink to="/" onClick={onItemClick} end className={baseNavLinkClass}>
-          Front Page
+          {t('frontPage')}
         </NavLink>
 
         <NavLink to="/latest" onClick={onItemClick} className={baseNavLinkClass}>
           <Radio className="w-3 h-3 text-red-500 animate-pulse" />
-          <span>Latest Wire</span>
+          <span>{t('latest')}</span>
         </NavLink>
 
         <NavLink to="/trending" onClick={onItemClick} className={baseNavLinkClass}>
           <Flame className="w-3 h-3 text-amber-500" />
-          <span>Trending</span>
+          <span>{t('trending')}</span>
         </NavLink>
 
         <NavLink to="/videos" onClick={onItemClick} className={baseNavLinkClass}>
           <Film className="w-3 h-3 text-blue-500" />
-          <span>Videos</span>
+          <span>{t('videos')}</span>
         </NavLink>
 
         {activeCategories.slice(0, 6).map((category) => (
@@ -71,7 +74,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={onItemClick}
             className={baseNavLinkClass}
           >
-            {category.name}
+            {getCategoryName(category.slug, category.name)}
           </NavLink>
         ))}
       </div>

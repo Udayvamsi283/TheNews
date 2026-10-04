@@ -43,7 +43,7 @@ async function runVerification() {
   // 2.1 Homepage
   const homeRes = await fetch(`${API_BASE}/public/home`);
   console.log('GET /public/home status:', homeRes.status);
-  const homeJson = await homeRes.json();
+  const homeJson: any = await homeRes.json();
   const homeData = homeJson.data;
   console.log('  - Breaking post:', homeData.breaking, '(Expect null, bar hidden)');
   console.log('  - Hero story:', homeData.heroStory, '(Expect null)');
@@ -57,7 +57,7 @@ async function runVerification() {
   // 2.2 Latest
   const latestRes = await fetch(`${API_BASE}/public/latest`);
   console.log('GET /public/latest status:', latestRes.status);
-  const latestJson = await latestRes.json();
+  const latestJson: any = await latestRes.json();
   console.log('  - Latest posts count:', latestJson.data.posts.length, '(Expect 0)');
   if (latestJson.data.posts.length !== 0) {
     throw new Error('Latest feed returned fake data!');
@@ -67,7 +67,7 @@ async function runVerification() {
   // 2.3 Trending
   const trendingRes = await fetch(`${API_BASE}/public/trending`);
   console.log('GET /public/trending status:', trendingRes.status);
-  const trendingJson = await trendingRes.json();
+  const trendingJson: any = await trendingRes.json();
   console.log('  - Trending posts count:', trendingJson.data.posts.length, '(Expect 0)');
   if (trendingJson.data.posts.length !== 0) {
     throw new Error('Trending feed returned fake data!');
@@ -77,7 +77,7 @@ async function runVerification() {
   // 2.4 Search
   const searchRes = await fetch(`${API_BASE}/public/search?q=journalism`);
   console.log('GET /public/search status:', searchRes.status);
-  const searchJson = await searchRes.json();
+  const searchJson: any = await searchRes.json();
   console.log('  - Search posts count:', searchJson.data.posts.length, '(Expect 0)');
   if (searchJson.data.posts.length !== 0) {
     throw new Error('Search feed returned fake data!');
@@ -87,7 +87,7 @@ async function runVerification() {
   // 2.5 Category
   const catRes = await fetch(`${API_BASE}/public/categories/${category.slug}/posts`);
   console.log(`GET /public/categories/${category.slug}/posts status:`, catRes.status);
-  const catJson = await catRes.json();
+  const catJson: any = await catRes.json();
   console.log('  - Category posts count:', catJson.data.posts.length, '(Expect 0)');
   if (catJson.data.posts.length !== 0) {
     throw new Error('Category feed returned fake data!');
@@ -108,7 +108,7 @@ async function runVerification() {
   // 3.2 Fetch CSRF Token & Authenticate as Admin
   console.log('\n4. Authenticating as Admin User with CSRF Protection...');
   const csrfRes = await fetch(`${API_BASE}/auth/csrf-token`);
-  const csrfJson = await csrfRes.json();
+  const csrfJson: any = await csrfRes.json();
   const csrfToken = csrfJson.data?.csrfToken;
   const csrfCookie = csrfRes.headers.get('set-cookie')?.split(';')[0].trim() || '';
 
@@ -139,7 +139,7 @@ async function runVerification() {
   const statsRes = await fetch(`${API_BASE}/posts/admin/stats`, {
     headers: { Cookie: adminCookie }
   });
-  const statsJson = await statsRes.json();
+  const statsJson: any = await statsRes.json();
   const stats = statsJson.data;
   console.log('Dashboard Counts:', stats.counts);
   if (stats.counts.totalPosts !== 0 || stats.counts.published !== 0) {
@@ -172,7 +172,7 @@ async function runVerification() {
       isBreaking: false
     })
   });
-  const post1Json = await post1Res.json();
+  const post1Json: any = await post1Res.json();
   const post1 = post1Json.data;
   if (!post1) {
     throw new Error('Post 1 creation failed: ' + JSON.stringify(post1Json));
@@ -204,7 +204,7 @@ async function runVerification() {
       isBreaking: true
     })
   });
-  const post2Json = await post2Res.json();
+  const post2Json: any = await post2Res.json();
   const post2 = post2Json.data;
   if (!post2) {
     throw new Error('Post 2 creation failed: ' + JSON.stringify(post2Json));
@@ -238,7 +238,7 @@ async function runVerification() {
       isBreaking: false
     })
   });
-  const post3Json = await post3Res.json();
+  const post3Json: any = await post3Res.json();
   const post3 = post3Json.data;
   if (!post3) {
     throw new Error('Post 3 creation failed: ' + JSON.stringify(post3Json));
@@ -276,7 +276,7 @@ async function runVerification() {
       isBreaking: false
     })
   });
-  const post4Json = await post4Res.json();
+  const post4Json: any = await post4Res.json();
   const post4 = post4Json.data;
   if (!post4) {
     throw new Error('Post 4 creation failed: ' + JSON.stringify(post4Json));
@@ -286,7 +286,7 @@ async function runVerification() {
   // 6. Verify Public Curation with Real Content
   console.log('\n7. Verifying Public Website Presentation with Real CMS Content...');
   const populatedHomeRes = await fetch(`${API_BASE}/public/home`);
-  const populatedHomeJson = await populatedHomeRes.json();
+  const populatedHomeJson: any = await populatedHomeRes.json();
   const populatedHome = populatedHomeJson.data;
 
   console.log('  - Breaking news alert:', populatedHome.breaking?.title);
@@ -302,7 +302,7 @@ async function runVerification() {
   console.log('    ✓ Hero story correctly displays featured post:', populatedHome.heroStory.title);
 
   const populatedLatestRes = await fetch(`${API_BASE}/public/latest`);
-  const populatedLatestJson = await populatedLatestRes.json();
+  const populatedLatestJson: any = await populatedLatestRes.json();
   console.log('  - Latest posts count:', populatedLatestJson.data.posts.length);
   if (populatedLatestJson.data.posts.length !== 4) {
     throw new Error('Latest feed does not contain all 4 published posts!');
@@ -314,7 +314,7 @@ async function runVerification() {
   const updatedStatsRes = await fetch(`${API_BASE}/posts/admin/stats`, {
     headers: { Cookie: adminCookie }
   });
-  const updatedStatsJson = await updatedStatsRes.json();
+  const updatedStatsJson: any = await updatedStatsRes.json();
   const updatedCounts = updatedStatsJson.data.counts;
   console.log('Dashboard Counts:', updatedCounts);
   if (updatedCounts.totalPosts !== 4 || updatedCounts.published !== 4) {

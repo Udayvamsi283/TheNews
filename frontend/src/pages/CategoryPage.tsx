@@ -5,14 +5,16 @@ import { apiClient } from '../services/apiClient';
 import { Layers, Clock, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ArticleImagePlaceholder } from '../components/common/ArticleImagePlaceholder';
 import { NotFoundPage } from './NotFoundPage';
+import { useLanguage } from '../context/LanguageContext';
 
 export const CategoryPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [page, setPage] = useState(1);
+  const { currentLanguage, getCategoryName } = useLanguage();
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['public', 'category', slug, page],
-    queryFn: () => apiClient.getCategoryPosts(slug!, { page, limit: 12 }),
+    queryKey: ['public', 'category', slug, page, currentLanguage],
+    queryFn: () => apiClient.getCategoryPosts(slug!, { page, limit: 12, lang: currentLanguage }),
     enabled: !!slug
   });
 
@@ -38,7 +40,7 @@ export const CategoryPage: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl sm:text-5xl font-black font-serif text-gray-950 dark:text-white capitalize">
-              {category?.name || slug}
+              {getCategoryName(slug || '', category?.name || slug || '')}
             </h1>
             {category?.description && (
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-300 max-w-2xl leading-relaxed">

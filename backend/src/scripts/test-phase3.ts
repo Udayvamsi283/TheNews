@@ -172,7 +172,9 @@ async function runPhase3Tests() {
 
   // 7. Secure Post Preview by Preview Token
   try {
-    const res = await fetch(`${BASE_URL}/posts/preview/${previewToken}`);
+    const res = await fetch(`${BASE_URL}/posts/preview/${previewToken}`, {
+      headers: { Cookie: adminCookie }
+    });
     const json: any = await res.json();
     assert(
       res.status === 200 && json.data?._id === createdPostId,

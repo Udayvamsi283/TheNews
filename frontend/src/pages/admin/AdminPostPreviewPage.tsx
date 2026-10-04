@@ -332,7 +332,7 @@ export const AdminPostPreviewPage: React.FC = () => {
             {/* Rich Article HTML Content */}
             {post.content && (
               <div
-                className="prose dark:prose-invert max-w-none text-slate-800 dark:text-slate-200 leading-relaxed font-serif text-sm sm:text-base space-y-4"
+                className="article-content-body prose dark:prose-invert max-w-none text-slate-800 dark:text-slate-200 leading-relaxed font-serif text-sm sm:text-base space-y-4"
                 dangerouslySetInnerHTML={{ __html: post.content }}
               />
             )}

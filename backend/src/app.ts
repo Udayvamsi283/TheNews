@@ -19,23 +19,32 @@ export const createApp = (): Application => {
   // Security Headers
   app.use(helmet());
 
-  // CORS Configuration - In production, restrict strictly to CLIENT_URL
-  const allowedOrigins: string[] =
-    env.NODE_ENV === 'production'
-      ? env.CLIENT_URL.includes(',')
-        ? env.CLIENT_URL.split(',').map((u) => u.trim())
-        : [env.CLIENT_URL]
-      : [env.CLIENT_URL, 'http://localhost:5173', 'http://127.0.0.1:5173'];
+  // CORS Configuration - Explicitly parse configured client origins from CLIENT_URL
+  const configuredOrigins = env.CLIENT_URL.split(',').map((u) => u.trim().replace(/\/$/, ''));
 
   app.use(
     cors({
       origin: (origin, callback) => {
         // Allow requests with no origin (e.g. mobile apps, curl, or same-origin server healthchecks)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin)) {
+
+        const normalizedOrigin = origin.replace(/\/$/, '');
+
+        // 1. Check explicitly configured origins (works in both development and production)
+        if (configuredOrigins.includes(normalizedOrigin)) {
           return callback(null, true);
         }
-        return callback(new Error(`CORS origin ${origin} not permitted.`));
+
+        // 2. In local development, dynamically permit any localhost / 127.0.0.1 port (e.g. 5173, 5174, etc.)
+        if (env.NODE_ENV !== 'production') {
+          const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(normalizedOrigin);
+          if (isLocalhost) {
+            return callback(null, true);
+          }
+        }
+
+        // Refuse disallowed origin without throwing an unhandled Express 500 error
+        return callback(null, false);
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

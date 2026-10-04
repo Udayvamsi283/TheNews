@@ -475,8 +475,12 @@ class ApiClient {
   // Public Discovery & Engagement API
   // ==========================================
 
-  public async getHomepageData(): Promise<HomepageData> {
-    const res = await this.request<{ success: boolean; data: HomepageData }>('/public/home');
+  public async getHomepageData(params?: { lang?: string }): Promise<HomepageData> {
+    const query = new URLSearchParams();
+    if (params?.lang) query.set('lang', params.lang);
+    const res = await this.request<{ success: boolean; data: HomepageData }>(
+      `/public/home${query.toString() ? `?${query.toString()}` : ''}`
+    );
     return res.data;
   }
 
@@ -535,11 +539,12 @@ class ApiClient {
 
   public async getCategoryPosts(
     slug: string,
-    params?: { page?: number; limit?: number }
+    params?: { page?: number; limit?: number; lang?: string }
   ): Promise<{ category: Category; posts: Post[]; pagination: Pagination }> {
     const query = new URLSearchParams();
     if (params?.page) query.set('page', params.page.toString());
     if (params?.limit) query.set('limit', params.limit.toString());
+    if (params?.lang) query.set('lang', params.lang);
     const res = await this.request<{
       success: boolean;
       data: { category: Category; posts: Post[]; pagination: Pagination };
@@ -550,10 +555,12 @@ class ApiClient {
   public async getLatestPosts(params?: {
     page?: number;
     limit?: number;
+    lang?: string;
   }): Promise<{ posts: Post[]; pagination: Pagination }> {
     const query = new URLSearchParams();
     if (params?.page) query.set('page', params.page.toString());
     if (params?.limit) query.set('limit', params.limit.toString());
+    if (params?.lang) query.set('lang', params.lang);
     const res = await this.request<{
       success: boolean;
       data: { posts: Post[]; pagination: Pagination };
@@ -561,13 +568,18 @@ class ApiClient {
     return res.data;
   }
 
-  public async getTrendingPosts(params?: { limit?: number }): Promise<Post[]> {
+  public async getTrendingPosts(params?: { limit?: number; lang?: string }): Promise<Post[]> {
     const query = new URLSearchParams();
     if (params?.limit) query.set('limit', params.limit.toString());
-    const res = await this.request<{ success: boolean; data: Post[] }>(
-      `/public/trending${query.toString() ? `?${query.toString()}` : ''}`
-    );
-    return res.data;
+    if (params?.lang) query.set('lang', params.lang);
+    const res = await this.request<{
+      success: boolean;
+      data: { posts: Post[]; window?: string } | Post[];
+    }>(`/public/trending${query.toString() ? `?${query.toString()}` : ''}`);
+    if (Array.isArray(res.data)) {
+      return res.data;
+    }
+    return res.data?.posts || [];
   }
 
   public async getVideoPosts(params?: {
@@ -634,6 +646,20 @@ class ApiClient {
       success: boolean;
       data: { bookmarks: Post[]; pagination: Pagination };
     }>(`/users/me/bookmarks${query.toString() ? `?${query.toString()}` : ''}`);
+    return res.data;
+  }
+
+  public async getUserLikes(params?: {
+    page?: number;
+    limit?: number;
+  }): Promise<{ likes: Post[]; pagination: Pagination }> {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', params.page.toString());
+    if (params?.limit) query.set('limit', params.limit.toString());
+    const res = await this.request<{
+      success: boolean;
+      data: { likes: Post[]; pagination: Pagination };
+    }>(`/users/me/likes${query.toString() ? `?${query.toString()}` : ''}`);
     return res.data;
   }
 

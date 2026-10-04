@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../services/apiClient';
@@ -9,6 +9,7 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Checkbox } from '../../components/ui/Checkbox';
 import { useToast } from '../../components/ui/Toast';
+import { useAuth } from '../../hooks/useAuth';
 import { TipTapEditor } from '../../components/editor/TipTapEditor';
 import { MediaLibraryModal } from '../../components/media/MediaLibraryModal';
 import { GalleryEditor } from '../../components/cms/GalleryEditor';
@@ -19,8 +20,7 @@ import { PollEditor } from '../../components/cms/PollEditor';
 import { EventEditor } from '../../components/cms/EventEditor';
 import { SeoSettingsPanel } from '../../components/cms/SeoSettingsPanel';
 import { FaqEditorPanel } from '../../components/cms/FaqEditorPanel';
-import { TranslationsPanel } from '../../components/cms/TranslationsPanel';
-import { slugify } from '../../lib/utils';
+import { slugify, isArticleContentEmpty } from '../../lib/utils';
 import {
   FileText,
   Image as ImageIcon,
@@ -41,6 +41,30 @@ import {
   HelpCircle,
   Languages
 } from 'lucide-react';
+
+const SUPPORTED_EDITOR_LANGUAGES = [
+  { code: 'en', name: 'English', nativeName: 'English' },
+  { code: 'te', name: 'Telugu', nativeName: 'తెలుగు' },
+  { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी' }
+];
+
+interface LocalizedDraft {
+  title: string;
+  slug: string;
+  isSlugCustomized: boolean;
+  summary: string;
+  content: string;
+  seo: any;
+}
+
+const emptyDraft = (): LocalizedDraft => ({
+  title: '',
+  slug: '',
+  isSlugCustomized: false,
+  summary: '',
+  content: '',
+  seo: {}
+});
 
 const FORMAT_CONFIGS: {
   id: PostFormat;
@@ -99,21 +123,27 @@ const FORMAT_CONFIGS: {
 ];
 
 export const AdminNewPostPage: React.FC = () => {
+  const { user } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const [selectedFormat, setSelectedFormat] = useState<PostFormat | null>(null);
 
-  // Form State
-  const [title, setTitle] = useState('');
-  const [slug, setSlug] = useState('');
-  const [isSlugCustomized, setIsSlugCustomized] = useState(false);
-  const [summary, setSummary] = useState('');
-  const [content, setContent] = useState('');
+  // Multilingual State: dictionary per language
+  const [editingLangCode, setEditingLangCode] = useState<string>('en');
+  const [primaryLanguageId, setPrimaryLanguageId] = useState<string>('');
+  const [langDrafts, setLangDrafts] = useState<Record<string, LocalizedDraft>>({
+    en: emptyDraft(),
+    te: emptyDraft(),
+    hi: emptyDraft()
+  });
+
+  // Common metadata
   const [categoryId, setCategoryId] = useState('');
-  const [languageId, setLanguageId] = useState('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [newTagName, setNewTagName] = useState('');
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
   const [featuredImage, setFeaturedImage] = useState<FeaturedImage | undefined>();
   const [isFullWidth, setIsFullWidth] = useState(false);
   const [registeredOnly, setRegisteredOnly] = useState(false);
@@ -133,13 +163,11 @@ export const AdminNewPostPage: React.FC = () => {
   const [pollDetails, setPollDetails] = useState<any>({ question: '', options: [{ id: '1', text: '' }, { id: '2', text: '' }] });
   const [eventDetails, setEventDetails] = useState<any>({});
 
-  // Advanced Panels State
-  const [seo, setSeo] = useState<any>({});
+  // Structured FAQ
   const [faq, setFaq] = useState<any[]>([]);
-  const [translations, setTranslations] = useState<any[]>([]);
 
   // Accordion toggles
-  const [openSection, setOpenSection] = useState<'seo' | 'faq' | 'translations' | null>(null);
+  const [openSection, setOpenSection] = useState<'seo' | 'faq' | null>(null);
 
   // Media Library Modal
   const [isFeaturedMediaOpen, setIsFeaturedMediaOpen] = useState(false);
@@ -161,30 +189,88 @@ export const AdminNewPostPage: React.FC = () => {
     queryFn: () => apiClient.getTags()
   });
 
-  // Set default category and language when available
-  React.useEffect(() => {
+  // Set default category
+  useEffect(() => {
     if (categories.length > 0 && !categoryId) {
       setCategoryId(categories[0]._id || categories[0].id || '');
     }
   }, [categories, categoryId]);
 
-  React.useEffect(() => {
-    if (languages.length > 0 && !languageId) {
-      const def = languages.find(l => l.isDefault) || languages[0];
-      setLanguageId(def._id || def.id || '');
+  // Set default primary language based on user's preferred language, falling back to default language
+  useEffect(() => {
+    if (languages.length > 0 && !primaryLanguageId) {
+      const userPref = (user?.preferredLanguage || 'en').toLowerCase().trim();
+      const matched = languages.find((l) => l.code === userPref);
+      const def = matched || languages.find((l) => l.isDefault) || languages[0];
+      setPrimaryLanguageId(def._id || def.id || '');
+      // Start editing in that language
+      if (matched?.code) {
+        setEditingLangCode(matched.code);
+      }
     }
-  }, [languages, languageId]);
+  }, [languages, primaryLanguageId, user?.preferredLanguage]);
+
+  // Active language draft helper
+  const currentDraft = langDrafts[editingLangCode] || emptyDraft();
+
+  const updateCurrentDraft = (patch: Partial<LocalizedDraft>) => {
+    setLangDrafts((prev) => ({
+      ...prev,
+      [editingLangCode]: {
+        ...(prev[editingLangCode] || emptyDraft()),
+        ...patch
+      }
+    }));
+  };
 
   const handleTitleChange = (val: string) => {
-    setTitle(val);
-    if (!isSlugCustomized) {
-      setSlug(slugify(val));
+    const isCustomized = currentDraft.isSlugCustomized;
+    updateCurrentDraft({
+      title: val,
+      slug: isCustomized ? currentDraft.slug : slugify(val)
+    });
+  };
+
+  const handleCreateTag = async () => {
+    const name = newTagName.trim();
+    if (!name) return;
+
+    const existing = tags.find((t) => t.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      const existingId = existing._id || existing.id;
+      if (existingId && !selectedTagIds.includes(existingId)) {
+        setSelectedTagIds([...selectedTagIds, existingId]);
+      }
+      setNewTagName('');
+      showToast(`Tag #${name} selected`, 'info');
+      return;
+    }
+
+    setIsCreatingTag(true);
+    try {
+      const createdTag = await apiClient.createTag({ name });
+      const newId = createdTag._id || createdTag.id;
+      await queryClient.invalidateQueries({ queryKey: ['tags'] });
+      if (newId) {
+        setSelectedTagIds((prev) => [...prev, newId]);
+      }
+      setNewTagName('');
+      showToast(`Tag #${name} created and attached!`, 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to create tag', 'error');
+    } finally {
+      setIsCreatingTag(false);
     }
   };
 
   const handleSave = async (status: PostStatus) => {
-    if (!title.trim() || title.length < 3) {
-      showToast('Please provide a title with at least 3 characters', 'error');
+    const primaryLangObj = languages.find((l) => (l._id || l.id) === primaryLanguageId) || languages[0];
+    const primaryCode = (primaryLangObj?.code || 'en').toLowerCase();
+    const primaryDraft = langDrafts[primaryCode] || langDrafts.en;
+
+    if (!primaryDraft.title.trim() || primaryDraft.title.length < 3) {
+      showToast(`Please provide a headline of at least 3 characters for the primary language (${primaryLangObj?.name || 'Primary'})`, 'error');
+      setEditingLangCode(primaryCode);
       return;
     }
 
@@ -193,8 +279,8 @@ export const AdminNewPostPage: React.FC = () => {
       return;
     }
 
-    if (!languageId) {
-      showToast('Please select a language locale', 'error');
+    if (!primaryLanguageId) {
+      showToast('Please select a primary dispatch language', 'error');
       return;
     }
 
@@ -203,15 +289,53 @@ export const AdminNewPostPage: React.FC = () => {
       return;
     }
 
+    const format = selectedFormat || 'article';
+    const isBodyEmpty = isArticleContentEmpty(primaryDraft.content);
+
+    if (format === 'article' && isBodyEmpty && (status === 'published' || status === 'scheduled')) {
+      showToast(`Please add the article body for ${primaryLangObj?.name || 'the primary language'} before publishing.`, 'error');
+      setEditingLangCode(primaryCode);
+      const editorEl = document.querySelector('.ProseMirror') as HTMLElement;
+      if (editorEl) {
+        editorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        editorEl.focus();
+      }
+      return;
+    }
+
+    const cleanContent = isBodyEmpty ? '' : primaryDraft.content.trim();
+
+    // Construct translations array for other supported languages that have content
+    const translations: any[] = [];
+    SUPPORTED_EDITOR_LANGUAGES.forEach((sup) => {
+      if (sup.code !== primaryCode) {
+        const draft = langDrafts[sup.code];
+        if (draft && draft.title.trim()) {
+          const langDoc = languages.find((l) => l.code === sup.code);
+          if (langDoc) {
+            translations.push({
+              language: langDoc._id || langDoc.id,
+              languageCode: sup.code,
+              title: draft.title.trim(),
+              slug: draft.slug.trim() || slugify(draft.title),
+              summary: draft.summary.trim(),
+              content: isArticleContentEmpty(draft.content) ? '' : draft.content.trim(),
+              seo: draft.seo || {}
+            });
+          }
+        }
+      }
+    });
+
     setIsSubmitting(true);
     try {
       const payload: any = {
-        title: title.trim(),
-        slug: slug.trim() || slugify(title),
-        summary: summary.trim(),
-        content,
+        title: primaryDraft.title.trim(),
+        slug: primaryDraft.slug.trim() || slugify(primaryDraft.title),
+        summary: primaryDraft.summary.trim(),
+        content: cleanContent,
         category: categoryId,
-        language: languageId,
+        language: primaryLanguageId,
         tags: selectedTagIds,
         postFormat: selectedFormat || 'article',
         featuredImage,
@@ -222,7 +346,7 @@ export const AdminNewPostPage: React.FC = () => {
         isFeatured,
         isBreaking,
         externalUrl: externalUrl.trim(),
-        seo,
+        seo: primaryDraft.seo || {},
         faq,
         translations
       };
@@ -296,6 +420,9 @@ export const AdminNewPostPage: React.FC = () => {
       </div>
     );
   }
+
+  const primaryLangObj = languages.find((l) => (l._id || l.id) === primaryLanguageId);
+  const primaryLangCode = (primaryLangObj?.code || 'en').toLowerCase();
 
   // Step 2: Post Editor
   return (
@@ -398,16 +525,64 @@ export const AdminNewPostPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Main Content Form (8 Cols) */}
         <div className="lg:col-span-8 space-y-6">
-          <Card className="p-4 sm:p-6 space-y-4 bg-white dark:bg-navy-850">
-            {/* Title */}
+          <Card className="p-4 sm:p-6 space-y-5 bg-white dark:bg-navy-850">
+            {/* MULTILINGUAL LANGUAGE SWITCHING TABS */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-navy-750">
+              <div className="flex items-center gap-2">
+                <Languages className="w-4 h-4 text-editorial-red" />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Editing Language:
+                </span>
+              </div>
+              <div className="flex items-center bg-slate-100 dark:bg-navy-900 p-1 rounded-lg border border-slate-200 dark:border-navy-700">
+                {SUPPORTED_EDITOR_LANGUAGES.map((lang) => {
+                  const isActive = editingLangCode === lang.code;
+                  const isPrimary = primaryLangCode === lang.code;
+                  const hasDraft = Boolean(
+                    langDrafts[lang.code]?.title?.trim() ||
+                    langDrafts[lang.code]?.content?.trim()
+                  );
+
+                  return (
+                    <button
+                      key={lang.code}
+                      type="button"
+                      onClick={() => setEditingLangCode(lang.code)}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-1.5 ${
+                        isActive
+                          ? 'bg-editorial-red text-white shadow-sm'
+                          : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <span>{lang.nativeName}</span>
+                      <span className="text-[10px] opacity-75 font-normal">({lang.name})</span>
+                      {isPrimary && (
+                        <span
+                          className={`text-[9px] uppercase px-1 rounded font-bold ${
+                            isActive ? 'bg-white/20 text-white' : 'bg-editorial-red/10 text-editorial-red'
+                          }`}
+                        >
+                          Primary
+                        </span>
+                      )}
+                      {!isPrimary && hasDraft && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Has localized content" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Title / Headline for Active Language */}
             <div className="space-y-1">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                Dispatch Headline / Title *
+                Headline / Title ({SUPPORTED_EDITOR_LANGUAGES.find((l) => l.code === editingLangCode)?.name}) *
               </label>
               <input
                 type="text"
-                placeholder="Enter compelling article headline..."
-                value={title}
+                placeholder={`Enter compelling headline in ${SUPPORTED_EDITOR_LANGUAGES.find((l) => l.code === editingLangCode)?.name}...`}
+                value={currentDraft.title}
                 onChange={(e) => handleTitleChange(e.target.value)}
                 className="w-full text-lg sm:text-xl font-bold p-3 rounded-lg border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-slate-900 dark:text-white focus:outline-none focus:border-editorial-red"
               />
@@ -418,26 +593,25 @@ export const AdminNewPostPage: React.FC = () => {
               <span className="text-slate-400 font-mono">slug: /</span>
               <input
                 type="text"
-                value={slug}
+                value={currentDraft.slug}
                 onChange={(e) => {
-                  setSlug(e.target.value);
-                  setIsSlugCustomized(true);
+                  updateCurrentDraft({ slug: e.target.value, isSlugCustomized: true });
                 }}
                 placeholder="auto-generated-slug"
                 className="flex-1 px-2 py-1 text-xs font-mono rounded border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-900 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-editorial-red"
               />
             </div>
 
-            {/* Summary */}
+            {/* Summary for Active Language */}
             <div className="space-y-1">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                Editorial Summary / Dek
+                Editorial Summary / Dek ({SUPPORTED_EDITOR_LANGUAGES.find((l) => l.code === editingLangCode)?.name})
               </label>
               <textarea
                 rows={2}
-                placeholder="Brief 1-2 sentence lead summarizing the story for previews and indexing..."
-                value={summary}
-                onChange={(e) => setSummary(e.target.value)}
+                placeholder={`Brief 1-2 sentence lead in ${SUPPORTED_EDITOR_LANGUAGES.find((l) => l.code === editingLangCode)?.name}...`}
+                value={currentDraft.summary}
+                onChange={(e) => updateCurrentDraft({ summary: e.target.value })}
                 className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-slate-900 dark:text-white focus:outline-none focus:border-editorial-red"
               />
             </div>
@@ -507,20 +681,30 @@ export const AdminNewPostPage: React.FC = () => {
               )}
             </div>
 
-            {/* Rich Text Editor for Body / Background */}
+            {/* TipTap Rich Text Editor: SAME TipTap for English, Telugu, and Hindi */}
             <div className="space-y-2 pt-4 border-t border-slate-100 dark:border-navy-750">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                {selectedFormat === 'article' || selectedFormat === 'table_of_contents'
-                  ? 'Article Body Content (TipTap WYSIWYG)'
-                  : 'Editorial Commentary / Context'}
-              </label>
-              <TipTapEditor content={content} onChange={setContent} minHeight="380px" />
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  {selectedFormat === 'article' || selectedFormat === 'table_of_contents'
+                    ? `Article Body Content (${SUPPORTED_EDITOR_LANGUAGES.find((l) => l.code === editingLangCode)?.nativeName} — TipTap WYSIWYG)`
+                    : `Editorial Commentary / Context (${SUPPORTED_EDITOR_LANGUAGES.find((l) => l.code === editingLangCode)?.nativeName})`}
+                </label>
+                <span className="text-[11px] text-slate-400">
+                  Format is preserved independently for each language
+                </span>
+              </div>
+              <TipTapEditor
+                key={editingLangCode}
+                content={currentDraft.content}
+                onChange={(html) => updateCurrentDraft({ content: html })}
+                minHeight="380px"
+              />
             </div>
           </Card>
 
-          {/* Advanced Collapsible Accordions: SEO, FAQ, Translations */}
+          {/* Advanced Collapsible Accordions: SEO & FAQ */}
           <div className="space-y-3">
-            {/* SEO Accordion */}
+            {/* SEO Accordion for Active Language */}
             <Card className="overflow-hidden">
               <div
                 onClick={() => setOpenSection(openSection === 'seo' ? null : 'seo')}
@@ -529,7 +713,7 @@ export const AdminNewPostPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Globe className="w-4 h-4 text-editorial-red" />
                   <span className="font-bold text-xs uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                    Search Engine Optimization & Open Graph
+                    SEO & Open Graph ({SUPPORTED_EDITOR_LANGUAGES.find((l) => l.code === editingLangCode)?.name})
                   </span>
                 </div>
                 {openSection === 'seo' ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -537,10 +721,10 @@ export const AdminNewPostPage: React.FC = () => {
               {openSection === 'seo' && (
                 <div className="p-4 border-t border-slate-200 dark:border-navy-750">
                   <SeoSettingsPanel
-                    seo={seo}
-                    onChange={setSeo}
-                    defaultTitle={title}
-                    defaultDescription={summary}
+                    seo={currentDraft.seo || {}}
+                    onChange={(newSeo) => updateCurrentDraft({ seo: newSeo })}
+                    defaultTitle={currentDraft.title}
+                    defaultDescription={currentDraft.summary}
                   />
                 </div>
               )}
@@ -563,32 +747,6 @@ export const AdminNewPostPage: React.FC = () => {
               {openSection === 'faq' && (
                 <div className="p-4 border-t border-slate-200 dark:border-navy-750">
                   <FaqEditorPanel faq={faq} onChange={setFaq} />
-                </div>
-              )}
-            </Card>
-
-            {/* Multilingual Translations Accordion */}
-            <Card className="overflow-hidden">
-              <div
-                onClick={() => setOpenSection(openSection === 'translations' ? null : 'translations')}
-                className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-navy-800 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <Languages className="w-4 h-4 text-editorial-red" />
-                  <span className="font-bold text-xs uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                    Multilingual Translations ({translations.length})
-                  </span>
-                </div>
-                {openSection === 'translations' ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-              </div>
-              {openSection === 'translations' && (
-                <div className="p-4 border-t border-slate-200 dark:border-navy-750">
-                  <TranslationsPanel
-                    translations={translations}
-                    onChange={setTranslations}
-                    availableLanguages={languages}
-                    currentLanguageId={languageId}
-                  />
                 </div>
               )}
             </Card>
@@ -621,14 +779,14 @@ export const AdminNewPostPage: React.FC = () => {
               </select>
             </div>
 
-            {/* Language */}
+            {/* Primary Dispatch Language */}
             <div className="space-y-1">
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Primary Dispatch Language *
+                Primary Language *
               </label>
               <select
-                value={languageId}
-                onChange={(e) => setLanguageId(e.target.value)}
+                value={primaryLanguageId}
+                onChange={(e) => setPrimaryLanguageId(e.target.value)}
                 className="w-full p-2 text-xs rounded border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-900 text-slate-900 dark:text-white focus:outline-none focus:border-editorial-red"
               >
                 {languages.map((lang) => (
@@ -637,13 +795,21 @@ export const AdminNewPostPage: React.FC = () => {
                   </option>
                 ))}
               </select>
+              <p className="text-[11px] text-slate-400">
+                Primary language for canonical publication and indexing.
+              </p>
             </div>
 
-            {/* Tags Multi-select */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Editorial Tags
-              </label>
+            {/* Tags with Database Taxonomy & Inline Tag Creation */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Editorial Tags ({selectedTagIds.length} selected)
+                </label>
+                <span className="text-[11px] text-slate-400">MongoDB taxonomy</span>
+              </div>
+
+              {/* Tag Badges */}
               <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2 border border-slate-200 dark:border-navy-700 rounded bg-slate-50 dark:bg-navy-900">
                 {tags.map((tag) => {
                   const tagId = tag._id || tag.id || '';
@@ -662,13 +828,39 @@ export const AdminNewPostPage: React.FC = () => {
                       className={`px-2 py-1 rounded text-[11px] font-semibold transition-colors ${
                         isChecked
                           ? 'bg-editorial-red text-white'
-                          : 'bg-white dark:bg-navy-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-navy-700'
+                          : 'bg-white dark:bg-navy-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-navy-700 hover:border-slate-400'
                       }`}
                     >
                       #{tag.name}
                     </button>
                   );
                 })}
+              </div>
+
+              {/* Add New Tag Inline */}
+              <div className="pt-2 border-t border-slate-200 dark:border-navy-700 flex items-center gap-1.5">
+                <input
+                  type="text"
+                  placeholder="New tag name..."
+                  value={newTagName}
+                  onChange={(e) => setNewTagName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleCreateTag();
+                    }
+                  }}
+                  className="flex-1 px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-editorial-red"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCreateTag}
+                  disabled={!newTagName.trim() || isCreatingTag}
+                >
+                  {isCreatingTag ? '...' : '+ Create'}
+                </Button>
               </div>
             </div>
           </Card>

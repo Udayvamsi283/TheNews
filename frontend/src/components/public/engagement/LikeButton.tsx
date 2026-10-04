@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../../hooks/useAuth';
 import { apiClient } from '../../../services/apiClient';
 import { Heart } from 'lucide-react';
@@ -18,10 +19,20 @@ export const LikeButton: React.FC<LikeButtonProps> = ({
   size = 'md'
 }) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [isLiked, setIsLiked] = useState<boolean>(initialIsLiked);
   const [likeCount, setLikeCount] = useState<number>(initialLikeCount);
   const [loading, setLoading] = useState<boolean>(false);
+
+  // Synchronize state when props change (e.g. on auth change, navigation, or data fetch)
+  useEffect(() => {
+    setIsLiked(Boolean(initialIsLiked));
+  }, [initialIsLiked]);
+
+  useEffect(() => {
+    setLikeCount(initialLikeCount || 0);
+  }, [initialLikeCount]);
 
   const handleToggleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -53,6 +64,8 @@ export const LikeButton: React.FC<LikeButtonProps> = ({
         const res = await apiClient.unlikePost(postId);
         setLikeCount(res.likeCount);
       }
+      queryClient.invalidateQueries({ queryKey: ['public', 'post'] });
+      queryClient.invalidateQueries({ queryKey: ['user', 'likes'] });
     } catch (err) {
       // Revert optimistic update on failure
       setIsLiked(prevLiked);

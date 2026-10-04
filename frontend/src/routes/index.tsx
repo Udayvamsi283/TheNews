@@ -28,6 +28,7 @@ const RegisterPage = lazy(() => import('../pages/RegisterPage').then((m) => ({ d
 const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })));
 const ProfilePage = lazy(() => import('../pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
 const SavedArticlesPage = lazy(() => import('../pages/SavedArticlesPage').then((m) => ({ default: m.SavedArticlesPage })));
+const LikedArticlesPage = lazy(() => import('../pages/LikedArticlesPage').then((m) => ({ default: m.LikedArticlesPage })));
 const LatestPage = lazy(() => import('../pages/LatestPage').then((m) => ({ default: m.LatestPage })));
 const TrendingPage = lazy(() => import('../pages/TrendingPage').then((m) => ({ default: m.TrendingPage })));
 const VideosPage = lazy(() => import('../pages/VideosPage').then((m) => ({ default: m.VideosPage })));
@@ -68,6 +69,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             {withSuspense(SavedArticlesPage)}
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'liked',
+        element: (
+          <ProtectedRoute>
+            {withSuspense(LikedArticlesPage)}
           </ProtectedRoute>
         )
       },
