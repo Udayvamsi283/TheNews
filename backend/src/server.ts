@@ -19,8 +19,8 @@ const startServer = async () => {
 
     // 4. Start HTTP server
     const server = app.listen(env.PORT, () => {
-      logger.info(`The News API server running in [${env.NODE_ENV}] mode on http://localhost:${env.PORT}`);
-      logger.info(`Health check endpoint: http://localhost:${env.PORT}/api/v1/health`);
+      logger.info(`The News API server running in [${env.NODE_ENV}] mode on port ${env.PORT}`);
+      logger.info(`Health check endpoint: /api/v1/health`);
     });
 
     // Graceful Shutdown Handlers

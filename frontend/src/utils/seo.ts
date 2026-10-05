@@ -5,6 +5,8 @@
  * and scrapers supporting JS rendering. Canonical full-text indexing is driven by sitemap.xml.
  */
 
+import { env } from '../config/env';
+
 interface SeoMetadata {
   title?: string;
   description?: string;
@@ -20,8 +22,12 @@ const DEFAULT_IMAGE = '/favicon.svg';
 export const updateSeoMetadata = (meta: SeoMetadata = {}) => {
   const title = meta.title ? `${meta.title} | The News Report` : DEFAULT_TITLE;
   const description = meta.description || DEFAULT_DESCRIPTION;
-  const image = meta.image || DEFAULT_IMAGE;
-  const url = meta.url || window.location.href;
+  const rawImage = meta.image || DEFAULT_IMAGE;
+  const origin = env.SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+  const image = rawImage.startsWith('http://') || rawImage.startsWith('https://')
+    ? rawImage
+    : (origin ? `${origin}${rawImage.startsWith('/') ? '' : '/'}${rawImage}` : rawImage);
+  const url = meta.url || (typeof window !== 'undefined' ? window.location.href : (origin || '/'));
   const type = meta.type || 'website';
 
   // 1. Update Document Title
