@@ -21,7 +21,7 @@ export const Footer: React.FC = () => {
             <Link to="/" className="inline-block group focus:outline-none">
               <div className="flex items-baseline gap-1.5">
                 <span className="text-3xl font-black uppercase tracking-tight text-white font-sans">
-                  THE NEWS
+                  THE NEWS REPORT
                 </span>
                 <span className="w-2.5 h-2.5 rounded-full bg-editorial-red inline-block mb-1" />
               </div>
@@ -90,7 +90,7 @@ export const Footer: React.FC = () => {
         {/* Bottom copyright line */}
         <div className="mt-12 pt-8 border-t border-navy-800/80 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-4">
           <div>
-            © {new Date().getFullYear()} The News. All rights reserved.
+            © {new Date().getFullYear()} The News Report. All rights reserved.
           </div>
         </div>
       </div>

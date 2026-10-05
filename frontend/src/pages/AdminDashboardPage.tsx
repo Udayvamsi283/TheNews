@@ -232,7 +232,7 @@ export const AdminDashboardPage: React.FC = () => {
                       {post.category?.name || 'Unassigned'}
                     </TableCell>
                     <TableCell className="text-xs text-slate-500 dark:text-slate-400">
-                      {post.author?.name || 'The News'}
+                      {post.author?.name || 'The News Report'}
                     </TableCell>
                     <TableCell>
                       <Badge

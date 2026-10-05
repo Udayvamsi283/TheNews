@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../services/apiClient';
@@ -9,7 +9,10 @@ import {
   Lock,
   Globe,
   Tag as TagIcon,
-  HelpCircle
+  HelpCircle,
+  Clock,
+  Sparkles,
+  Radio
 } from 'lucide-react';
 import { LikeButton } from '../components/public/engagement/LikeButton';
 import { BookmarkButton } from '../components/public/engagement/BookmarkButton';
@@ -21,6 +24,8 @@ import { VideoRenderer } from '../components/public/format-renderers/VideoRender
 import { AudioRenderer } from '../components/public/format-renderers/AudioRenderer';
 import { PollRenderer } from '../components/public/format-renderers/PollRenderer';
 import { EventRenderer } from '../components/public/format-renderers/EventRenderer';
+import { CompactArticleItem } from '../components/public/CompactArticleItem';
+import { ArticleCard } from '../components/public/ArticleCard';
 import { updateSeoMetadata } from '../utils/seo';
 import { useToast } from '../components/ui/Toast';
 import { useLanguage } from '../context/LanguageContext';
@@ -55,15 +60,74 @@ export const ArticlePage: React.FC = () => {
     }
   }, [post?._id, post?.title, post?.summary]);
 
+  // Fetch category stories for related reading
+  const { data: categoryData } = useQuery({
+    queryKey: ['public', 'category-posts-sidebar', post?.category?.slug, effectiveLang],
+    queryFn: () => apiClient.getCategoryPosts(post!.category!.slug, { limit: 8, lang: effectiveLang }),
+    enabled: !!post?.category?.slug
+  });
+
+  // Fetch latest stories for reading sidebar
+  const { data: latestData } = useQuery({
+    queryKey: ['public', 'latest-posts-sidebar', effectiveLang],
+    queryFn: () => apiClient.getLatestPosts({ limit: 6, lang: effectiveLang }),
+    enabled: !!post
+  });
+
+  // Deterministic recommendations:
+  // Priority 1: Same category + overlapping tags
+  // Priority 2: Same category
+  // Priority 3: Latest published articles (excluding current and already chosen related)
+  const relatedArticles = useMemo(() => {
+    if (!post) return [];
+    const currentPostTags = (post.tags || []).map((t: any) =>
+      (typeof t === 'string' ? t : t.name || t.slug || '').toLowerCase()
+    );
+
+    const categoryList = (categoryData?.posts || []).filter(
+      (p) => p._id !== post._id && p.slug !== post.slug
+    );
+
+    const sorted = [...categoryList].sort((a, b) => {
+      const aTags = (a.tags || []).map((t: any) =>
+        (typeof t === 'string' ? t : t.name || t.slug || '').toLowerCase()
+      );
+      const bTags = (b.tags || []).map((t: any) =>
+        (typeof t === 'string' ? t : t.name || t.slug || '').toLowerCase()
+      );
+      const aOverlap = aTags.filter((t: string) => currentPostTags.includes(t)).length;
+      const bOverlap = bTags.filter((t: string) => currentPostTags.includes(t)).length;
+      return bOverlap - aOverlap;
+    });
+
+    return sorted.slice(0, 4);
+  }, [post, categoryData]);
+
+  const latestArticles = useMemo(() => {
+    if (!post) return [];
+    const relatedIds = new Set(relatedArticles.map((p) => p._id));
+    return (latestData?.posts || [])
+      .filter((p) => p._id !== post._id && p.slug !== post.slug && !relatedIds.has(p._id))
+      .slice(0, 4);
+  }, [post, latestData, relatedArticles]);
+
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16 space-y-6 animate-pulse">
-        <div className="h-6 w-32 bg-gray-200 dark:bg-gray-800 rounded" />
-        <div className="h-12 bg-gray-200 dark:bg-gray-800 rounded-xl w-3/4" />
-        <div className="h-96 bg-gray-200 dark:bg-gray-800 rounded-3xl" />
-        <div className="space-y-3">
-          <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded" />
-          <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-5/6" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-pulse">
+          <div className="lg:col-span-8 space-y-6">
+            <div className="h-6 w-32 bg-slate-200 dark:bg-navy-800 rounded" />
+            <div className="h-12 bg-slate-200 dark:bg-navy-800 rounded-xl w-3/4" />
+            <div className="h-96 bg-slate-200 dark:bg-navy-800 rounded-3xl" />
+            <div className="space-y-3">
+              <div className="h-4 bg-slate-200 dark:bg-navy-800 rounded" />
+              <div className="h-4 bg-slate-200 dark:bg-navy-800 rounded w-5/6" />
+            </div>
+          </div>
+          <div className="hidden lg:block lg:col-span-4 space-y-4">
+            <div className="h-64 bg-slate-200 dark:bg-navy-800 rounded-2xl" />
+            <div className="h-64 bg-slate-200 dark:bg-navy-800 rounded-2xl" />
+          </div>
         </div>
       </div>
     );
@@ -72,15 +136,15 @@ export const ArticlePage: React.FC = () => {
   if (isError || !post) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-24 text-center">
-        <h1 className="text-3xl font-bold font-serif text-gray-900 dark:text-white mb-3">
-          Dispatch Not Found
+        <h1 className="text-3xl font-bold font-serif text-navy-900 dark:text-white mb-3">
+          Dispatch Not Located
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-          The requested article could not be located or may have been unpublished.
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+          The requested article could not be located in The News Report archives.
         </p>
         <Link
           to="/"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white bg-primary-600 hover:bg-primary-700 shadow-sm"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white bg-navy-900 hover:bg-navy-800 dark:bg-white dark:text-navy-950 shadow-sm"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Return to Front Page</span>
@@ -98,7 +162,7 @@ export const ArticlePage: React.FC = () => {
           url: window.location.href
         });
       } catch {
-        // Ignored if user dismissed share dialog
+        // Ignored
       }
     } else {
       await navigator.clipboard.writeText(window.location.href);
@@ -125,29 +189,35 @@ export const ArticlePage: React.FC = () => {
       })
     : '';
 
+  const wordCount = post.content
+    ? post.content.split(/\s+/).length
+    : post.summary
+    ? post.summary.split(/\s+/).length * 4
+    : 200;
+  const readingTime = Math.max(1, Math.ceil(wordCount / 200));
+
   const imageUrl =
     post.featuredImage?.url ||
     post.images?.[0]?.url ||
     (post.postFormat === 'gallery' && post.galleryItems?.[0]?.image) ||
     '';
 
-  // Check if article has alternate translations
   const availableTranslations = post.translations || [];
 
   return (
-    <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* 1. Breadcrumbs & Language Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-800 pb-4">
-        <nav aria-label="Breadcrumbs" className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-          <Link to="/" className="hover:text-gray-900 dark:hover:text-white flex items-center gap-1">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200/80 dark:border-navy-800 pb-4 mb-8">
+        <nav aria-label="Breadcrumbs" className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <Link to="/" className="hover:text-navy-900 dark:hover:text-white flex items-center gap-1">
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>{t('home')}</span>
           </Link>
-          <ChevronRight className="w-3 h-3 text-gray-300" />
+          <ChevronRight className="w-3 h-3 text-slate-300 dark:text-navy-700" />
           {post.category && (
             <Link
               to={`/category/${post.category.slug}`}
-              className="font-semibold text-primary-600 dark:text-primary-400 hover:underline uppercase tracking-wider"
+              className="font-bold uppercase tracking-wider text-editorial-red dark:text-editorial-red-dark hover:underline"
             >
               {getCategoryName(post.category.slug, post.category.name)}
             </Link>
@@ -157,15 +227,15 @@ export const ArticlePage: React.FC = () => {
         {/* Translation Switcher */}
         {availableTranslations.length > 0 && (
           <div className="flex items-center gap-2 text-xs">
-            <Globe className="w-3.5 h-3.5 text-gray-400" />
-            <span className="text-gray-400">Language:</span>
+            <Globe className="w-3.5 h-3.5 text-slate-400" />
+            <span className="text-slate-500 dark:text-slate-400 font-medium">Edition:</span>
             <button
               type="button"
               onClick={() => handleLanguageChange('en')}
               className={`px-2 py-0.5 rounded font-bold uppercase transition-colors ${
                 effectiveLang === 'en'
-                  ? 'bg-primary-600 text-white'
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  ? 'bg-editorial-red text-white'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-navy-800'
               }`}
             >
               EN
@@ -177,8 +247,8 @@ export const ArticlePage: React.FC = () => {
                 onClick={() => handleLanguageChange(tr.languageCode)}
                 className={`px-2 py-0.5 rounded font-bold uppercase transition-colors ${
                   effectiveLang === tr.languageCode
-                    ? 'bg-primary-600 text-white'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    ? 'bg-editorial-red text-white'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-navy-800'
                 }`}
               >
                 {tr.languageCode}
@@ -188,228 +258,313 @@ export const ArticlePage: React.FC = () => {
         )}
       </div>
 
-      {/* 2. Article Header */}
-      <header className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          {post.category && (
-            <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-300">
-              {post.category.name}
-            </span>
-          )}
-          {post.postFormat && post.postFormat !== 'article' && (
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900">
-              {post.postFormat.replace('_', ' ')}
-            </span>
-          )}
-          {post.registeredOnly && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-              <Lock className="w-3 h-3" /> Exclusive
-            </span>
-          )}
-        </div>
-
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-black font-serif text-gray-950 dark:text-white leading-[1.15]">
-          {post.title}
-        </h1>
-
-        {post.summary && (
-          <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 font-serif leading-relaxed italic border-l-4 border-primary-600 pl-4 py-1">
-            {post.summary}
-          </p>
-        )}
-
-        {/* Byline & Engagement Row */}
-        <div className="pt-4 border-y border-gray-200 dark:border-gray-800 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            {post.author?.avatar ? (
-              <img
-                src={post.author.avatar}
-                alt={post.author.name}
-                className="w-10 h-10 rounded-full object-cover ring-2 ring-primary-100 dark:ring-primary-950"
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-800 dark:bg-primary-950 dark:text-primary-300 font-bold flex items-center justify-center text-sm">
-                {post.author?.name ? post.author.name.charAt(0).toUpperCase() : 'N'}
-              </div>
-            )}
-            <div>
-              <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                By {post.author?.name || 'The News'}
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">
-                {publishedDate}
-              </div>
+      {/* Main 12-Column Editorial Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+        {/* Main Article Content (Col 8) */}
+        <article className="lg:col-span-8 min-w-0 space-y-8">
+          {/* Article Header */}
+          <header className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              {post.category && (
+                <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-editorial-red/10 text-editorial-red dark:bg-editorial-red/20 dark:text-editorial-red-dark">
+                  {post.category.name}
+                </span>
+              )}
+              {post.postFormat && post.postFormat !== 'article' && (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-navy-900 text-white dark:bg-slate-100 dark:text-navy-950">
+                  {post.postFormat.replace('_', ' ')}
+                </span>
+              )}
+              {post.registeredOnly && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300">
+                  <Lock className="w-3 h-3" /> Exclusive
+                </span>
+              )}
             </div>
-          </div>
 
-          <div className="flex items-center gap-3">
-            <LikeButton
-              postId={post._id}
-              initialLikeCount={post.likeCount || 0}
-              initialIsLiked={post.isLiked || false}
-            />
-            <BookmarkButton
-              postId={post._id}
-              initialIsBookmarked={post.isBookmarked || false}
-            />
-            <button
-              type="button"
-              onClick={handleShare}
-              title="Share article"
-              className="p-2 rounded-full border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-            >
-              <Share2 className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </header>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black font-serif text-navy-900 dark:text-white leading-[1.15]">
+              {post.title}
+            </h1>
 
-      {/* 3. Featured Image (when present and not audio/video embed) */}
-      {imageUrl && post.postFormat !== 'video' && (
-        <figure className="space-y-2">
-          <div className="rounded-3xl overflow-hidden bg-gray-100 dark:bg-gray-800 aspect-[16/9] shadow-md">
-            <img
-              src={imageUrl}
-              alt={post.featuredImage?.alt || post.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
-          {post.featuredImage?.caption && (
-            <figcaption className="text-xs text-gray-500 dark:text-gray-400 px-2">
-              {post.featuredImage.caption}
-            </figcaption>
-          )}
-        </figure>
-      )}
-
-      {/* 4. Format-Specific Content & Server-Side Registered Gating */}
-      <section className="article-body">
-        {isGated ? (
-          /* Clean Editorial Registered-Only Gating Card */
-          <div className="my-8 border-t-2 border-b-2 border-editorial-red bg-slate-50 dark:bg-navy-850 p-6 md:p-8">
-            <div className="max-w-2xl mx-auto space-y-4">
-              <div className="flex items-center gap-2 text-editorial-red dark:text-editorial-red-dark font-sans font-bold text-xs uppercase tracking-widest">
-                <Lock className="w-3.5 h-3.5" />
-                <span>Reader Account Required</span>
-              </div>
-
-              <h2 className="text-xl md:text-2xl font-serif font-bold text-slate-900 dark:text-white leading-tight">
-                Continue reading this story with free reader access
-              </h2>
-
-              <p className="text-sm text-slate-600 dark:text-slate-400 font-sans leading-relaxed">
-                This report is reserved for registered readers of The News. Create a free account or sign in to access full reporting, participate in discussions, and save stories.
+            {post.summary && (
+              <p className="text-lg sm:text-xl text-slate-700 dark:text-slate-300 font-serif leading-relaxed italic border-l-4 border-editorial-red pl-4 py-1">
+                {post.summary}
               </p>
+            )}
 
-              <div className="pt-2 flex flex-wrap items-center gap-3">
-                <Link
-                  to="/login"
-                  className="px-5 py-2 rounded font-sans text-xs font-semibold text-white bg-navy-900 hover:bg-navy-800 dark:bg-white dark:text-navy-900 dark:hover:bg-slate-100 transition-colors"
+            {/* Byline & Engagement Row */}
+            <div className="pt-4 border-y border-slate-200 dark:border-navy-800 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                {post.author?.avatar ? (
+                  <img
+                    src={post.author.avatar}
+                    alt={post.author.name}
+                    className="w-10 h-10 rounded-full object-cover ring-2 ring-slate-200 dark:ring-navy-700"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-slate-200 text-navy-900 dark:bg-navy-800 dark:text-slate-200 font-bold flex items-center justify-center text-sm">
+                    {post.author?.name ? post.author.name.charAt(0).toUpperCase() : 'N'}
+                  </div>
+                )}
+                <div>
+                  <div className="text-sm font-bold text-navy-900 dark:text-white">
+                    By {post.author?.name || 'The News Report'}
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                    <span>{publishedDate}</span>
+                    <span>•</span>
+                    <span className="flex items-center gap-1 font-mono">
+                      <Clock className="w-3 h-3" /> {readingTime} min read
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <LikeButton
+                  postId={post._id}
+                  initialLikeCount={post.likeCount || 0}
+                  initialIsLiked={post.isLiked || false}
+                />
+                <BookmarkButton
+                  postId={post._id}
+                  initialIsBookmarked={post.isBookmarked || false}
+                />
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  title="Share article"
+                  className="p-2 rounded-full border border-slate-200 dark:border-navy-750 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors"
                 >
-                  Sign In
-                </Link>
-                <Link
-                  to="/register"
-                  className="px-5 py-2 rounded font-sans text-xs font-semibold text-editorial-red dark:text-editorial-red-dark border border-editorial-red dark:border-editorial-red-dark hover:bg-editorial-red/10 transition-colors"
-                >
-                  Create Free Account
-                </Link>
+                  <Share2 className="w-4 h-4" />
+                </button>
               </div>
             </div>
-          </div>
-        ) : (
-          /* Ungated Full Content Renderers */
-          <div className="space-y-8">
-            {/* Format: Gallery */}
-            {post.postFormat === 'gallery' && (
-              <GalleryRenderer items={post.galleryItems || []} title={post.title} />
-            )}
+          </header>
 
-            {/* Format: Sorted List */}
-            {post.postFormat === 'sorted_list' && (
-              <SortedListRenderer items={post.sortedListItems || []} />
-            )}
+          {/* Featured Image */}
+          {imageUrl && post.postFormat !== 'video' && (
+            <figure className="space-y-2">
+              <div className="rounded-3xl overflow-hidden bg-slate-100 dark:bg-navy-800 aspect-[16/9] shadow-md">
+                <img
+                  src={imageUrl}
+                  alt={post.featuredImage?.alt || post.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              {post.featuredImage?.caption && (
+                <figcaption className="text-xs text-slate-500 dark:text-slate-400 px-2 font-sans italic">
+                  {post.featuredImage.caption}
+                </figcaption>
+              )}
+            </figure>
+          )}
 
-            {/* Format: Video */}
-            {post.postFormat === 'video' && (
-              <VideoRenderer details={post.videoDetails} title={post.title} />
-            )}
+          {/* Format-Specific Content & Server-Side Registered Gating */}
+          <section className="article-body">
+            {isGated ? (
+              <div className="my-8 border-t-2 border-b-2 border-editorial-red bg-white dark:bg-navy-900 p-6 md:p-8 rounded-2xl shadow-sm">
+                <div className="max-w-2xl mx-auto space-y-4">
+                  <div className="flex items-center gap-2 text-editorial-red dark:text-editorial-red-dark font-sans font-bold text-xs uppercase tracking-widest">
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Reader Account Required</span>
+                  </div>
 
-            {/* Format: Audio */}
-            {post.postFormat === 'audio' && (
-              <AudioRenderer details={post.audioDetails} title={post.title} />
-            )}
+                  <h2 className="text-xl md:text-2xl font-serif font-bold text-navy-900 dark:text-white leading-tight">
+                    Continue reading this story with free reader access
+                  </h2>
 
-            {/* Format: Poll */}
-            {post.postFormat === 'poll' && (
-              <PollRenderer postId={post._id} pollDetails={post.pollDetails} />
-            )}
+                  <p className="text-sm text-slate-600 dark:text-slate-400 font-sans leading-relaxed">
+                    This report is reserved for registered readers of The News Report. Create a free account or sign in to access full reporting, participate in discussions, and save stories.
+                  </p>
 
-            {/* Format: Event */}
-            {post.postFormat === 'event' && (
-              <EventRenderer eventDetails={post.eventDetails} />
+                  <div className="pt-2 flex flex-wrap items-center gap-3">
+                    <Link
+                      to="/login"
+                      className="px-5 py-2 rounded font-sans text-xs font-semibold text-white bg-navy-900 hover:bg-navy-800 dark:bg-white dark:text-navy-950 dark:hover:bg-slate-100 transition-colors"
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      to="/register"
+                      className="px-5 py-2 rounded font-sans text-xs font-semibold text-editorial-red dark:text-editorial-red-dark border border-editorial-red dark:border-editorial-red-dark hover:bg-editorial-red/10 transition-colors"
+                    >
+                      Create Free Account
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-8">
+                {post.postFormat === 'gallery' && (
+                  <GalleryRenderer items={post.galleryItems || []} title={post.title} />
+                )}
+                {post.postFormat === 'sorted_list' && (
+                  <SortedListRenderer items={post.sortedListItems || []} />
+                )}
+                {post.postFormat === 'video' && (
+                  <VideoRenderer details={post.videoDetails} title={post.title} />
+                )}
+                {post.postFormat === 'audio' && (
+                  <AudioRenderer details={post.audioDetails} title={post.title} />
+                )}
+                {post.postFormat === 'poll' && (
+                  <PollRenderer postId={post._id} pollDetails={post.pollDetails} />
+                )}
+                {post.postFormat === 'event' && (
+                  <EventRenderer eventDetails={post.eventDetails} />
+                )}
+                {post.postFormat === 'table_of_contents' && (
+                  <TocRenderer content={post.content || ''} />
+                )}
+                {post.content && post.postFormat !== 'table_of_contents' && (
+                  <div
+                    className="article-content-body prose dark:prose-invert max-w-none prose-lg font-serif text-slate-800 dark:text-slate-200 leading-relaxed pt-2"
+                    dangerouslySetInnerHTML={{ __html: post.content }}
+                  />
+                )}
+              </div>
             )}
+          </section>
 
-            {/* Format: Table of Contents */}
-            {post.postFormat === 'table_of_contents' && (
-              <TocRenderer content={post.content || ''} />
-            )}
+          {/* FAQ Section */}
+          {post.faq && post.faq.length > 0 && !isGated && (
+            <section className="pt-8 border-t border-slate-200 dark:border-navy-800">
+              <div className="flex items-center gap-2 mb-6 text-xl font-bold font-serif text-navy-900 dark:text-white">
+                <HelpCircle className="w-5 h-5 text-editorial-red" />
+                <span>Frequently Asked Questions</span>
+              </div>
 
-            {/* Default Article Content / Additional Prose */}
-            {post.content && post.postFormat !== 'table_of_contents' && (
-              <div
-                className="article-content-body prose dark:prose-invert max-w-none prose-lg font-serif text-gray-800 dark:text-gray-200 leading-relaxed pt-2"
-                dangerouslySetInnerHTML={{ __html: post.content }}
-              />
-            )}
-          </div>
+              <div className="space-y-4">
+                {post.faq.map((item, idx) => (
+                  <details
+                    key={idx}
+                    className="group rounded-2xl border border-slate-200/90 dark:border-navy-700/80 bg-white dark:bg-navy-900 p-5 open:bg-slate-50 dark:open:bg-navy-850 transition-colors"
+                  >
+                    <summary className="font-bold text-base text-navy-900 dark:text-white cursor-pointer list-none flex items-center justify-between">
+                      <span>{item.question}</span>
+                      <span className="text-slate-400 group-open:rotate-180 transition-transform">↓</span>
+                    </summary>
+                    <p className="mt-3 text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-sans">
+                      {item.answer}
+                    </p>
+                  </details>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Tags */}
+          {post.tags && post.tags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 pt-6">
+              <TagIcon className="w-4 h-4 text-slate-400" />
+              {post.tags.map((tag: any) => (
+                <span
+                  key={tag._id || tag}
+                  className="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-navy-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition-colors"
+                >
+                  #{tag.name || tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Reader Comments Section */}
+          <CommentSection postId={post._id} initialCommentCount={post.commentCount || 0} />
+        </article>
+
+        {/* Desktop Reading Sidebar (Col 4 - Sticky) */}
+        <aside className="hidden lg:block lg:col-span-4 sticky top-28 space-y-8">
+          {/* Related Stories */}
+          {relatedArticles.length > 0 && (
+            <div className="rounded-2xl border border-slate-200/90 dark:border-navy-700/80 bg-white dark:bg-navy-900 p-5 shadow-xs space-y-3">
+              <div className="flex items-center gap-2 border-b border-slate-100 dark:border-navy-800 pb-3 text-xs font-black uppercase tracking-wider text-navy-900 dark:text-white">
+                <Sparkles className="w-4 h-4 text-editorial-red" />
+                <span>Related Dispatches</span>
+              </div>
+
+              <div className="divide-y divide-slate-100 dark:divide-navy-800/70">
+                {relatedArticles.map((rel) => (
+                  <CompactArticleItem
+                    key={rel._id}
+                    post={rel}
+                    imageSize="sm"
+                    showEngagement={false}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Latest News Wire */}
+          {latestArticles.length > 0 && (
+            <div className="rounded-2xl border border-slate-200/90 dark:border-navy-700/80 bg-white dark:bg-navy-900 p-5 shadow-xs space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 pb-3">
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-navy-900 dark:text-white">
+                  <Radio className="w-4 h-4 text-editorial-red animate-pulse" />
+                  <span>Latest News Wire</span>
+                </div>
+                <Link
+                  to="/latest"
+                  className="text-xs font-bold uppercase tracking-wider text-editorial-red dark:text-editorial-red-dark hover:underline"
+                >
+                  Full Wire →
+                </Link>
+              </div>
+
+              <div className="divide-y divide-slate-100 dark:divide-navy-800/70">
+                {latestArticles.map((lat) => (
+                  <CompactArticleItem
+                    key={lat._id}
+                    post={lat}
+                    imageSize="sm"
+                    showEngagement={false}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </aside>
+      </div>
+
+      {/* Mobile/Tablet Stacked Recommendations (<1024px) */}
+      <div className="lg:hidden mt-16 pt-10 border-t border-slate-200 dark:border-navy-800 space-y-12">
+        {relatedArticles.length > 0 && (
+          <section className="space-y-6">
+            <div className="flex items-center gap-2 text-xl font-bold font-serif text-navy-900 dark:text-white">
+              <Sparkles className="w-5 h-5 text-editorial-red" />
+              <span>Related Dispatches</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {relatedArticles.map((rel) => (
+                <ArticleCard key={rel._id} post={rel} variant="grid" />
+              ))}
+            </div>
+          </section>
         )}
-      </section>
 
-      {/* 5. FAQ Section (when provided) */}
-      {post.faq && post.faq.length > 0 && !isGated && (
-        <section className="pt-8 border-t border-gray-200 dark:border-gray-800">
-          <div className="flex items-center gap-2 mb-6 text-xl font-bold font-serif text-gray-900 dark:text-white">
-            <HelpCircle className="w-5 h-5 text-primary-600" />
-            <span>Frequently Asked Questions</span>
-          </div>
-
-          <div className="space-y-4">
-            {post.faq.map((item, idx) => (
-              <details
-                key={idx}
-                className="group rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 open:bg-gray-50 dark:open:bg-gray-900/80 transition-colors"
+        {latestArticles.length > 0 && (
+          <section className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xl font-bold font-serif text-navy-900 dark:text-white">
+                <Radio className="w-5 h-5 text-editorial-red" />
+                <span>Latest News Wire</span>
+              </div>
+              <Link
+                to="/latest"
+                className="text-xs font-bold uppercase tracking-wider text-editorial-red hover:underline"
               >
-                <summary className="font-bold text-base text-gray-900 dark:text-white cursor-pointer list-none flex items-center justify-between">
-                  <span>{item.question}</span>
-                  <span className="text-gray-400 group-open:rotate-180 transition-transform">↓</span>
-                </summary>
-                <p className="mt-3 text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-sans">
-                  {item.answer}
-                </p>
-              </details>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 6. Tags */}
-      {post.tags && post.tags.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 pt-6">
-          <TagIcon className="w-4 h-4 text-gray-400" />
-          {post.tags.map((tag: any) => (
-            <span
-              key={tag._id || tag}
-              className="px-3 py-1 rounded-lg text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-            >
-              #{tag.name || tag}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* 7. Reader Comments Section */}
-      <CommentSection postId={post._id} initialCommentCount={post.commentCount || 0} />
-    </article>
+                View Full Wire →
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {latestArticles.map((lat) => (
+                <ArticleCard key={lat._id} post={lat} variant="grid" />
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+    </div>
   );
 };

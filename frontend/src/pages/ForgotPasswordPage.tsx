@@ -9,7 +9,7 @@ export const ForgotPasswordPage: React.FC = () => {
         <div className="text-center space-y-2">
           <Link to="/" className="inline-flex items-baseline gap-1 focus:outline-none">
             <span className="text-2xl font-black uppercase tracking-tight text-navy-900 dark:text-white">
-              THE NEWS
+              THE NEWS REPORT
             </span>
             <span className="w-2 h-2 rounded-full bg-editorial-red inline-block" />
           </Link>

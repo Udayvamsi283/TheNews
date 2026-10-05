@@ -13,12 +13,12 @@ interface SeoMetadata {
   type?: 'website' | 'article';
 }
 
-const DEFAULT_TITLE = 'The News — Independent Journalism & Investigations';
-const DEFAULT_DESCRIPTION = 'The News delivers rigorous, uncompromised reporting, field dispatches, and public interest investigations.';
+const DEFAULT_TITLE = 'The News Report — Independent Journalism & Investigations';
+const DEFAULT_DESCRIPTION = 'The News Report delivers rigorous, uncompromised reporting, field dispatches, and public interest investigations.';
 const DEFAULT_IMAGE = '/favicon.svg';
 
 export const updateSeoMetadata = (meta: SeoMetadata = {}) => {
-  const title = meta.title ? `${meta.title} | The News` : DEFAULT_TITLE;
+  const title = meta.title ? `${meta.title} | The News Report` : DEFAULT_TITLE;
   const description = meta.description || DEFAULT_DESCRIPTION;
   const image = meta.image || DEFAULT_IMAGE;
   const url = meta.url || window.location.href;
@@ -47,7 +47,7 @@ export const updateSeoMetadata = (meta: SeoMetadata = {}) => {
   setMeta('property', 'og:image', image);
   setMeta('property', 'og:url', url);
   setMeta('property', 'og:type', type);
-  setMeta('property', 'og:site_name', 'The News');
+  setMeta('property', 'og:site_name', 'The News Report');
 
   // Twitter Card
   setMeta('name', 'twitter:card', 'summary_large_image');

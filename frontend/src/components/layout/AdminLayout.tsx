@@ -90,7 +90,7 @@ export const AdminLayout: React.FC = () => {
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
           <Link to="/admin" className="font-black text-lg text-navy-900 dark:text-white flex items-center gap-1.5">
-            <span>THE NEWS</span>
+            <span>THE NEWS REPORT</span>
             <span className="text-[10px] font-bold bg-editorial-red text-white px-1.5 py-0.2 rounded uppercase">
               Admin
             </span>
@@ -119,7 +119,7 @@ export const AdminLayout: React.FC = () => {
           {/* Sidebar Header */}
           <div className="p-4 border-b border-navy-800 flex items-center justify-between">
             <Link to="/admin" className="flex items-center gap-2">
-              <span className="font-black text-xl text-white tracking-tight">THE NEWS</span>
+              <span className="font-black text-xl text-white tracking-tight">THE NEWS REPORT</span>
               <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-editorial-red text-white">
                 CMS
               </span>

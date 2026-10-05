@@ -1,175 +1,112 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link, Navigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { apiClient } from '../services/apiClient';
-import { Bookmark, Trash2, Clock, BookOpen } from 'lucide-react';
-import { ArticleImagePlaceholder } from '../components/common/ArticleImagePlaceholder';
+import { Bookmark, BookOpen, Trash2 } from 'lucide-react';
+import { ArticleCard } from '../components/public/ArticleCard';
+import { useToast } from '../components/ui/Toast';
 
 export const SavedArticlesPage: React.FC = () => {
-  const { user, isLoading: authLoading } = useAuth();
-  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
+  const { showToast } = useToast();
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['user', 'bookmarks', page],
-    queryFn: () => apiClient.getUserBookmarks({ page, limit: 12 }),
-    enabled: !!user
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['users', 'me', 'bookmarks', page],
+    queryFn: () => apiClient.getUserBookmarks({ page, limit: 10 })
   });
-
-  const removeMutation = useMutation({
-    mutationFn: (postId: string) => apiClient.removeBookmark(postId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user', 'bookmarks'] });
-    }
-  });
-
-  if (authLoading) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center text-gray-500">
-        Loading reading list...
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
 
   const posts = data?.bookmarks || [];
   const pagination = data?.pagination;
 
+  const handleRemoveBookmark = async (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await apiClient.removeBookmark(id);
+      showToast('Article removed from bookmarks', 'info');
+      refetch();
+    } catch {
+      showToast('Failed to remove bookmark', 'error');
+    }
+  };
+
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="pb-6 border-b border-gray-200 dark:border-gray-800 mb-8">
-        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary-600 dark:text-primary-400 mb-2">
-          <Bookmark className="w-4 h-4 fill-primary-600 dark:fill-primary-400" />
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      {/* Header */}
+      <div className="pb-6 border-b border-slate-200 dark:border-navy-800">
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-editorial-red dark:text-editorial-red-dark mb-2">
+          <Bookmark className="w-4 h-4 fill-editorial-red dark:fill-editorial-red-dark" />
           <span>Personal Reading List</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-black font-serif text-gray-950 dark:text-white">
-          Saved Articles
+        <h1 className="text-3xl sm:text-4xl font-black font-serif text-navy-900 dark:text-white">
+          Saved Dispatches
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Articles and stories you have bookmarked for later reading.
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-sans">
+          Articles and field reports you have bookmarked for offline or later reading.
         </p>
       </div>
 
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="animate-pulse h-28 bg-gray-100 dark:bg-gray-900 rounded-2xl" />
+            <div key={i} className="animate-pulse h-28 bg-white dark:bg-navy-900 rounded-2xl border border-slate-200 dark:border-navy-800" />
           ))}
         </div>
       ) : posts.length === 0 ? (
         <div className="py-20 text-center">
-          <BookOpen className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
-          <h2 className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-1">
+          <BookOpen className="w-12 h-12 text-slate-300 dark:text-navy-700 mx-auto mb-3" />
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-1">
             No saved articles yet.
           </h2>
-          <p className="text-sm text-gray-400 max-w-sm mx-auto mb-6">
-            Click the bookmark icon on any article across The News to save it here for later.
+          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto mb-6">
+            Click the bookmark icon on any article across The News Report to save it here for later.
           </p>
           <Link
             to="/"
-            className="inline-flex items-center px-4 py-2 rounded-xl text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 shadow-sm transition-all"
+            className="inline-flex items-center px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-navy-900 hover:bg-navy-800 dark:bg-white dark:text-navy-950 shadow-xs transition-all"
           >
             Explore Front Page
           </Link>
         </div>
       ) : (
         <div className="space-y-4">
-          {posts.map((post) => {
-            const imageUrl = post.featuredImage?.url || post.images?.[0]?.url || '';
-
-            const publishedDate = post.publishedAt
-              ? new Date(post.publishedAt).toLocaleDateString([], {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
-                })
-              : '';
-
-            return (
-              <article
-                key={post._id}
-                className="group flex items-center justify-between gap-4 p-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-md transition-all"
+          {posts.map((post) => (
+            <div key={post._id} className="relative group">
+              <ArticleCard post={post} variant="horizontal" />
+              <button
+                type="button"
+                onClick={(e) => handleRemoveBookmark(post._id, e)}
+                title="Remove from bookmarks"
+                className="absolute top-4 right-4 p-2 rounded-lg bg-white/90 dark:bg-navy-800/90 text-slate-400 hover:text-editorial-red hover:bg-white dark:hover:bg-navy-750 transition-all opacity-0 group-hover:opacity-100 shadow-xs"
               >
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800">
-                    {imageUrl ? (
-                      <img
-                        src={imageUrl}
-                        alt={post.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                    ) : (
-                      <ArticleImagePlaceholder category={post.category?.name} className="h-full aspect-square" />
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0 space-y-1">
-                    {post.category && (
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-primary-600 dark:text-primary-400">
-                        {post.category.name}
-                      </span>
-                    )}
-                    <h2 className="text-base sm:text-lg font-bold font-serif text-gray-950 dark:text-white truncate group-hover:text-primary-600 dark:group-hover:text-primary-400">
-                      <Link to={`/article/${post.slug}`}>{post.title}</Link>
-                    </h2>
-                    <div className="flex items-center gap-3 text-xs text-gray-400">
-                      <span>{post.author?.name || 'The News'}</span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {publishedDate}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <Link
-                    to={`/article/${post.slug}`}
-                    className="hidden sm:inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold text-primary-700 bg-primary-50 dark:bg-primary-950 dark:text-primary-300 hover:bg-primary-100 transition-colors"
-                  >
-                    Read Story
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => removeMutation.mutate(post._id)}
-                    disabled={removeMutation.isPending}
-                    title="Remove from saved"
-                    className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </article>
-            );
-          })}
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Pagination Controls */}
+      {/* Pagination */}
       {pagination && typeof pagination.pages === 'number' && pagination.pages > 1 && (
-        <div className="mt-12 pt-6 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
+        <div className="pt-8 border-t border-slate-200 dark:border-navy-800 flex items-center justify-between">
           <button
             type="button"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
-            className="px-4 py-2 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            className="px-4 py-2 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 bg-white dark:bg-navy-850 border border-slate-200 dark:border-navy-700 hover:bg-slate-100 dark:hover:bg-navy-800 disabled:opacity-40 transition-colors"
           >
-            ← Previous
+            Previous
           </button>
-          <span className="text-xs text-gray-500 font-medium">
+          <span className="text-xs text-slate-500 font-medium">
             Page {page} of {pagination.pages}
           </span>
           <button
             type="button"
-            onClick={() => setPage((p) => Math.min(pagination.pages || 1, p + 1))}
             disabled={page >= (pagination.pages || 1)}
-            className="px-4 py-2 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+            onClick={() => setPage((p) => Math.min(pagination.pages || 1, p + 1))}
+            className="px-4 py-2 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 bg-white dark:bg-navy-850 border border-slate-200 dark:border-navy-700 hover:bg-slate-100 dark:hover:bg-navy-800 disabled:opacity-40 transition-colors"
           >
-            Next →
+            Next
           </button>
         </div>
       )}

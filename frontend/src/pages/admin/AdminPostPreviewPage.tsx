@@ -141,7 +141,7 @@ export const AdminPostPreviewPage: React.FC = () => {
                 </div>
                 <div>
                   <span className="font-bold text-slate-900 dark:text-white block">
-                    {post.author?.name || 'The News'}
+                    {post.author?.name || 'The News Report'}
                   </span>
                 </div>
               </div>

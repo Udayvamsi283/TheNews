@@ -31,10 +31,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const baseNavLinkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      'text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap flex items-center gap-1.5',
+      'text-xs font-bold uppercase tracking-wider px-3.5 py-1.5 rounded-lg transition-all whitespace-nowrap flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-editorial-red',
       isActive
-        ? 'bg-primary-600 text-white shadow-sm'
-        : 'text-gray-700 hover:text-gray-950 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800'
+        ? 'bg-editorial-red text-white shadow-sm font-extrabold'
+        : 'text-slate-700 hover:text-navy-900 hover:bg-slate-200/80 dark:text-slate-300 dark:hover:text-white dark:hover:bg-navy-800'
     );
 
   return (

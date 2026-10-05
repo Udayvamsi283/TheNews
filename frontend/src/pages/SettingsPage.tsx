@@ -82,7 +82,7 @@ export const SettingsPage: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="pb-6 border-b border-gray-200 dark:border-gray-800 mb-8">
-        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary-600 dark:text-primary-400 mb-2">
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-editorial-red dark:text-editorial-red-dark mb-2">
           <Settings className="w-4 h-4" />
           <span>Reader Preferences</span>
         </div>
@@ -112,7 +112,7 @@ export const SettingsPage: React.FC = () => {
         {/* Preferred Language */}
         <div className="rounded-2xl p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
           <div className="flex items-center gap-2 text-base font-bold text-gray-900 dark:text-white">
-            <Globe className="w-5 h-5 text-primary-600" />
+            <Globe className="w-5 h-5 text-editorial-red" />
             <span>Default Reading Language</span>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -122,7 +122,7 @@ export const SettingsPage: React.FC = () => {
           <select
             value={preferredLanguage}
             onChange={(e) => setPreferredLanguage(e.target.value)}
-            className="w-full sm:w-80 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:outline-none"
+            className="w-full sm:w-80 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-editorial-red focus:outline-none"
           >
             <option value="">System Default (English)</option>
             {languages.map((lang) => (
@@ -154,12 +154,12 @@ export const SettingsPage: React.FC = () => {
                   onClick={() => toggleInterest(catId)}
                   className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all select-none ${
                     isSelected
-                      ? 'border-primary-600 bg-primary-50/70 text-primary-900 dark:bg-primary-950/40 dark:text-primary-300 dark:border-primary-500 shadow-sm'
+                      ? 'border-editorial-red bg-editorial-red/10 text-navy-900 dark:bg-editorial-red/20 dark:text-white dark:border-editorial-red-dark shadow-sm'
                       : 'border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40 text-gray-700 dark:text-gray-300 hover:border-gray-300'
                   }`}
                 >
                   <span className="truncate">{cat.name}</span>
-                  {isSelected && <Check className="w-4 h-4 text-primary-600 dark:text-primary-400 flex-shrink-0 ml-1" />}
+                  {isSelected && <Check className="w-4 h-4 text-editorial-red dark:text-editorial-red-dark flex-shrink-0 ml-1" />}
                 </button>
               );
             })}
@@ -170,7 +170,7 @@ export const SettingsPage: React.FC = () => {
           <button
             type="submit"
             disabled={updateMutation.isPending}
-            className="px-6 py-2.5 rounded-xl font-bold text-sm text-white bg-primary-600 hover:bg-primary-700 active:scale-95 disabled:opacity-50 transition-all shadow-md"
+            className="px-6 py-2.5 rounded-xl font-bold text-sm text-white bg-navy-900 hover:bg-navy-800 dark:bg-white dark:text-navy-950 dark:hover:bg-slate-100 active:scale-95 disabled:opacity-50 transition-all shadow-md"
           >
             {updateMutation.isPending ? 'Saving Preferences...' : 'Save Preferences'}
           </button>

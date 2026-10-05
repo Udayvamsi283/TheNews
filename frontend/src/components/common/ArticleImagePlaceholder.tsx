@@ -18,7 +18,7 @@ export const ArticleImagePlaceholder: React.FC<ArticleImagePlaceholderProps> = (
         <Newspaper className="w-5 h-5" />
       </div>
       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-        {category || 'The News'}
+        {category || 'The News Report'}
       </span>
     </div>
   );

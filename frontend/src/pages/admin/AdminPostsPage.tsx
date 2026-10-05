@@ -313,7 +313,7 @@ export const AdminPostsPage: React.FC = () => {
                           {post.summary || 'No summary provided'}
                         </p>
                         <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                          <span>By {post.author?.name || 'The News'}</span>
+                          <span>By {post.author?.name || 'The News Report'}</span>
                           <span>•</span>
                           <span className="font-mono">/{post.slug}</span>
                           {post.translations && post.translations.length > 0 && (

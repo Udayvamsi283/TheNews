@@ -146,7 +146,7 @@ export const Header: React.FC = () => {
           <Link to="/" className="inline-block group focus:outline-none">
             <div className="flex items-baseline gap-1.5 justify-center md:justify-start">
               <span className="text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-tighter text-navy-900 dark:text-white font-sans">
-                THE NEWS
+                THE NEWS REPORT
               </span>
               <span className="w-2.5 h-2.5 rounded-full bg-editorial-red inline-block mb-1 group-hover:scale-125 transition-transform" />
             </div>
