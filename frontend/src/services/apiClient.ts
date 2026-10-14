@@ -34,6 +34,7 @@ function getCookie(name: string): string | null {
 
 class ApiClient {
   private baseUrl: string;
+  private cachedCsrfToken: string | null = null;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
@@ -45,7 +46,9 @@ class ApiClient {
         credentials: 'include'
       });
       const data = await res.json();
-      return data.csrfToken || '';
+      const token = data.csrfToken || '';
+      this.cachedCsrfToken = token;
+      return token;
     } catch {
       return '';
     }
@@ -67,7 +70,7 @@ class ApiClient {
 
     // Attach CSRF token on mutating requests
     if (isMutating) {
-      let csrfToken = getCookie('csrf-token');
+      let csrfToken = getCookie('csrf-token') || this.cachedCsrfToken;
       if (!csrfToken) {
         csrfToken = await this.fetchCsrfToken();
       }
@@ -135,6 +138,7 @@ class ApiClient {
   }
 
   public async logout(): Promise<void> {
+    this.cachedCsrfToken = null;
     await this.request<{ success: boolean }>('/auth/logout', { method: 'POST' });
   }
 

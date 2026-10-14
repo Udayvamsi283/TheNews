@@ -20,7 +20,10 @@ export const createApp = (): Application => {
   app.use(helmet());
 
   // CORS Configuration - Explicitly parse configured client origins from CLIENT_URL
-  const configuredOrigins = env.CLIENT_URL.split(',').map((u) => u.trim().replace(/\/$/, ''));
+  const configuredOrigins = env.CLIENT_URL
+    .split(',')
+    .map((u) => u.trim().replace(/\/$/, ''))
+    .filter(Boolean);
 
   app.use(
     cors({
@@ -28,10 +31,13 @@ export const createApp = (): Application => {
         // Allow requests with no origin (e.g. mobile apps, curl, or same-origin server healthchecks)
         if (!origin) return callback(null, true);
 
-        const normalizedOrigin = origin.replace(/\/$/, '');
+        const normalizedOrigin = origin.trim().replace(/\/$/, '');
 
         // 1. Check explicitly configured origins (works in both development and production)
-        if (configuredOrigins.includes(normalizedOrigin)) {
+        const isConfigured = configuredOrigins.some(
+          (allowed) => allowed.toLowerCase() === normalizedOrigin.toLowerCase()
+        );
+        if (isConfigured) {
           return callback(null, true);
         }
 

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import { env } from '../config/env.js';
+import { getCsrfCookieOptions } from '../utils/cookie.js';
 
 export const CSRF_COOKIE_NAME = 'csrf-token';
 export const CSRF_HEADER_NAME = 'x-csrf-token';
@@ -10,13 +11,7 @@ export const CSRF_HEADER_NAME = 'x-csrf-token';
  * and validates the X-CSRF-Token header against the cookie on state-changing requests.
  */
 export const csrfProtection = (req: Request, res: Response, next: NextFunction): void => {
-  const isProduction = env.NODE_ENV === 'production';
-  const cookieOptions = {
-    httpOnly: false, // Must be readable by client JS to attach to X-CSRF-Token header
-    secure: isProduction,
-    sameSite: isProduction ? ('none' as const) : ('lax' as const),
-    path: '/'
-  };
+  const cookieOptions = getCsrfCookieOptions(req);
 
   // If client doesn't have a CSRF cookie yet, generate and set one
   let existingToken = req.cookies?.[CSRF_COOKIE_NAME];

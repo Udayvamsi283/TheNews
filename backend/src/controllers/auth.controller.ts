@@ -7,27 +7,21 @@ import { env } from '../config/env.js';
 import { registerSchema, loginSchema } from '../validators/auth.validator.js';
 import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import { CSRF_COOKIE_NAME } from '../middleware/csrf.middleware.js';
+import {
+  getAuthCookieOptions,
+  getAuthClearCookieOptions,
+  getCsrfCookieOptions
+} from '../utils/cookie.js';
 
 const COOKIE_NAME = 'token';
 const BCRYPT_SALT_ROUNDS = 10;
 
-const getCookieOptions = () => {
-  const isProduction = env.NODE_ENV === 'production';
-  return {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? ('none' as const) : ('lax' as const),
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    path: '/'
-  };
-};
-
-const sendAuthToken = (res: Response, userId: string, role: string) => {
+const sendAuthToken = (req: Request, res: Response, userId: string, role: string) => {
   const token = jwt.sign({ id: userId, role }, env.JWT_SECRET, {
     expiresIn: '7d'
   });
 
-  res.cookie(COOKIE_NAME, token, getCookieOptions());
+  res.cookie(COOKIE_NAME, token, getAuthCookieOptions(req));
 };
 
 export const getCsrfToken = (req: Request, res: Response): void => {
@@ -66,7 +60,7 @@ export const register = async (req: Request, res: Response, next: NextFunction):
       status: 'active'
     });
 
-    sendAuthToken(res, user._id.toString(), user.role);
+    sendAuthToken(req, res, user._id.toString(), user.role);
 
     res.status(201).json({
       success: true,
@@ -111,7 +105,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
       return;
     }
 
-    sendAuthToken(res, user._id.toString(), user.role);
+    sendAuthToken(req, res, user._id.toString(), user.role);
 
     // Remove passwordHash from user object before sending
     user.passwordHash = undefined as any;
@@ -128,16 +122,9 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
   }
 };
 
-export const logout = (_req: Request, res: Response): void => {
-  const isProduction = env.NODE_ENV === 'production';
-  const clearOptions = {
-    httpOnly: true,
-    sameSite: isProduction ? ('none' as const) : ('lax' as const),
-    secure: isProduction,
-    path: '/'
-  };
-
-  res.clearCookie(COOKIE_NAME, clearOptions);
+export const logout = (req: Request, res: Response): void => {
+  res.clearCookie(COOKIE_NAME, getAuthClearCookieOptions(req));
+  res.clearCookie(CSRF_COOKIE_NAME, getCsrfCookieOptions(req));
 
   res.status(200).json({
     success: true,

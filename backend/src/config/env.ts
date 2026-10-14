@@ -5,7 +5,9 @@ dotenv.config();
 
 const envSchema = z.object({
   PORT: z.string().default('5000').transform((val) => parseInt(val, 10)),
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  NODE_ENV: z
+    .enum(['development', 'test', 'production'])
+    .default(process.env.RENDER ? 'production' : 'development'),
   MONGODB_URI: z.string({
     required_error: 'MONGODB_URI is required'
   }).min(1, 'MONGODB_URI cannot be empty'),
