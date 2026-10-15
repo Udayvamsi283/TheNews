@@ -4,6 +4,7 @@ import { Post } from '../../types';
 import { Clock, Eye, Heart, MessageSquare, Lock } from 'lucide-react';
 import { ArticleImagePlaceholder } from '../common/ArticleImagePlaceholder';
 import { cn } from '../../lib/utils';
+import { useLanguage } from '../../context/LanguageContext';
 
 export interface CompactArticleItemProps {
   post: Post;
@@ -24,6 +25,8 @@ export const CompactArticleItem: React.FC<CompactArticleItemProps> = ({
   className,
   imageSize = 'md'
 }) => {
+  const { t, getCategoryName } = useLanguage();
+  const categoryName = post.category ? getCategoryName(post.category.slug, post.category.name) : '';
   const imageUrl =
     post.featuredImage?.url ||
     post.images?.[0]?.url ||
@@ -75,11 +78,11 @@ export const CompactArticleItem: React.FC<CompactArticleItemProps> = ({
             loading="lazy"
           />
         ) : (
-          <ArticleImagePlaceholder category={post.category?.name} className="h-full aspect-square" />
+          <ArticleImagePlaceholder category={categoryName || post.category?.name} className="h-full aspect-square" />
         )}
 
         {post.registeredOnly && (
-          <div className="absolute top-1 left-1 p-0.5 rounded bg-navy-950/80 backdrop-blur text-amber-300" title="Exclusive Subscriber Story">
+          <div className="absolute top-1 left-1 p-0.5 rounded bg-navy-950/80 backdrop-blur text-amber-300" title={t('subscriberExclusive')}>
             <Lock className="w-2.5 h-2.5" />
           </div>
         )}
@@ -93,7 +96,7 @@ export const CompactArticleItem: React.FC<CompactArticleItemProps> = ({
               to={`/category/${post.category.slug}`}
               className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-editorial-red dark:text-editorial-red-dark hover:underline truncate"
             >
-              {post.category.name}
+              {categoryName || post.category.name}
             </Link>
           </div>
         )}
@@ -106,11 +109,9 @@ export const CompactArticleItem: React.FC<CompactArticleItemProps> = ({
 
         {showMeta && (
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400 pt-0.5">
-            {post.author?.name && (
-              <span className="truncate max-w-[120px] font-medium text-slate-600 dark:text-slate-300">
-                {post.author.name}
-              </span>
-            )}
+            <span className="truncate max-w-[120px] font-medium text-slate-600 dark:text-slate-300">
+              {post.author?.name || t('theNewsReport')}
+            </span>
             {post.author?.name && publishedDate && <span>•</span>}
             {publishedDate && (
               <span className="flex items-center gap-1 font-mono">

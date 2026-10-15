@@ -4,6 +4,7 @@ import { Post } from '../../types';
 import { Clock, Lock, ArrowRight } from 'lucide-react';
 import { ArticleImagePlaceholder } from '../common/ArticleImagePlaceholder';
 import { cn } from '../../lib/utils';
+import { useLanguage } from '../../context/LanguageContext';
 
 export interface ArticleCardProps {
   post: Post;
@@ -20,6 +21,8 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
   showExcerpt = true,
   showMeta = true
 }) => {
+  const { t, getCategoryName } = useLanguage();
+  const categoryName = post.category ? getCategoryName(post.category.slug, post.category.name) : '';
   const imageUrl =
     post.featuredImage?.url ||
     post.images?.[0]?.url ||
@@ -64,12 +67,12 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
               loading="lazy"
             />
           ) : (
-            <ArticleImagePlaceholder category={post.category?.name} className="h-full aspect-[4/3]" />
+            <ArticleImagePlaceholder category={categoryName || post.category?.name} className="h-full aspect-[4/3]" />
           )}
 
           {post.registeredOnly && (
             <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-navy-950/85 backdrop-blur text-amber-300 border border-amber-400/20">
-              <Lock className="w-2.5 h-2.5" /> Exclusive
+              <Lock className="w-2.5 h-2.5" /> {t('exclusive')}
             </span>
           )}
 
@@ -88,7 +91,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
                   to={`/category/${post.category.slug}`}
                   className="text-xs font-extrabold uppercase tracking-wider text-editorial-red dark:text-editorial-red-dark hover:underline"
                 >
-                  {post.category.name}
+                  {categoryName || post.category.name}
                 </Link>
               )}
               {publishedDate && (
@@ -114,13 +117,13 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
 
           <div className="mt-4 pt-3 border-t border-slate-100 dark:border-navy-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
             <span className="font-medium text-slate-700 dark:text-slate-300">
-              By {post.author?.name || 'The News Report'}
+              {t('by')} {post.author?.name || t('theNewsReport')}
             </span>
             <Link
               to={`/article/${post.slug}`}
               className="inline-flex items-center gap-1 font-semibold text-editorial-red dark:text-editorial-red-dark hover:underline text-xs"
             >
-              <span>Read Story</span>
+              <span>{t('readStory')}</span>
               <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
@@ -153,18 +156,18 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
                 loading="lazy"
               />
             ) : (
-              <ArticleImagePlaceholder category={post.category?.name} className="h-full aspect-[16/10]" />
+              <ArticleImagePlaceholder category={categoryName || post.category?.name} className="h-full aspect-[16/10]" />
             )}
 
             {post.registeredOnly && (
               <div className="absolute top-3 left-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-navy-950/85 backdrop-blur text-amber-300 border border-amber-400/20">
-                <Lock className="w-3 h-3" /> Exclusive
+                <Lock className="w-3 h-3" /> {t('exclusive')}
               </div>
             )}
 
             {post.category && (
               <span className="absolute bottom-3 right-3 px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider bg-navy-950/85 backdrop-blur text-white">
-                {post.category.name}
+                {categoryName || post.category.name}
               </span>
             )}
           </Link>
@@ -185,11 +188,11 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
         {showMeta && (
           <div className="px-5 sm:px-6 pb-5 pt-0 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between border-t border-slate-100 dark:border-navy-800/60 pt-3">
             <span className="font-medium text-slate-700 dark:text-slate-300">
-              {post.author?.name || 'The News Report'}
+              {t('by')} {post.author?.name || t('theNewsReport')}
             </span>
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1 font-mono">
-                <Clock className="w-3 h-3" /> {readingTime}m read
+                <Clock className="w-3 h-3" /> {readingTime}{t('mRead')}
               </span>
               {publishedDate && <span>• {publishedDate}</span>}
             </div>
@@ -222,18 +225,18 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
               loading="lazy"
             />
           ) : (
-            <ArticleImagePlaceholder category={post.category?.name} className="h-full aspect-[16/10]" />
+            <ArticleImagePlaceholder category={categoryName || post.category?.name} className="h-full aspect-[16/10]" />
           )}
 
           {post.registeredOnly && (
             <div className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-navy-950/85 backdrop-blur text-amber-300 border border-amber-400/20">
-              <Lock className="w-3 h-3" /> Exclusive
+              <Lock className="w-3 h-3" /> {t('exclusive')}
             </div>
           )}
 
           {post.category && (
             <span className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-navy-950/80 backdrop-blur text-white">
-              {post.category.name}
+              {categoryName || post.category.name}
             </span>
           )}
         </Link>
@@ -254,7 +257,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
       {showMeta && (
         <div className="px-4 sm:px-5 pb-4 pt-0 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between border-t border-slate-100 dark:border-navy-800/50 pt-2.5">
           <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[130px]">
-            {post.author?.name || 'The News Report'}
+            {t('by')} {post.author?.name || t('theNewsReport')}
           </span>
           {publishedDate && (
             <span className="flex items-center gap-1 font-mono text-[11px]">

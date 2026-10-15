@@ -3,12 +3,15 @@ import { Link } from 'react-router-dom';
 import { Post } from '../../types';
 import { Clock, Eye, Heart, MessageSquare, Lock } from 'lucide-react';
 import { ArticleImagePlaceholder } from '../common/ArticleImagePlaceholder';
+import { Avatar } from '../ui/Avatar';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface HeroStoryProps {
   post: Post;
 }
 
 export const HeroStory: React.FC<HeroStoryProps> = ({ post }) => {
+  const { t, getCategoryName } = useLanguage();
   const publishedDate = post.publishedAt
     ? new Date(post.publishedAt).toLocaleDateString(undefined, {
         month: 'short',
@@ -40,7 +43,7 @@ export const HeroStory: React.FC<HeroStoryProps> = ({ post }) => {
 
           {post.registeredOnly && (
             <div className="absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-navy-950/85 backdrop-blur text-amber-300 border border-amber-400/30">
-              <Lock className="w-3.5 h-3.5" /> Subscriber Exclusive
+              <Lock className="w-3.5 h-3.5" /> {t('subscriberExclusive')}
             </div>
           )}
         </div>
@@ -54,12 +57,12 @@ export const HeroStory: React.FC<HeroStoryProps> = ({ post }) => {
                   to={`/category/${post.category.slug}`}
                   className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-editorial-red/10 text-editorial-red hover:bg-editorial-red/20 dark:bg-editorial-red/20 dark:text-editorial-red-dark transition-colors"
                 >
-                  {post.category.name}
+                  {getCategoryName(post.category.slug, post.category.name)}
                 </Link>
               )}
               <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 font-mono">
                 <Clock className="w-3.5 h-3.5" />
-                {readingTime} min read
+                {readingTime} {t('minRead')}
               </span>
             </div>
 
@@ -78,20 +81,10 @@ export const HeroStory: React.FC<HeroStoryProps> = ({ post }) => {
 
           <div className="pt-6 border-t border-slate-100 dark:border-navy-800 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {post.author?.avatar ? (
-                <img
-                  src={post.author.avatar}
-                  alt={post.author.name}
-                  className="w-10 h-10 rounded-full object-cover ring-2 ring-slate-200 dark:ring-navy-700"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-slate-200 text-navy-900 dark:bg-navy-800 dark:text-slate-200 font-bold flex items-center justify-center text-sm">
-                  {post.author?.name ? post.author.name.charAt(0).toUpperCase() : 'N'}
-                </div>
-              )}
+              <Avatar src={post.author?.avatar} name={post.author?.name} size="md" />
               <div>
                 <p className="text-sm font-bold text-navy-900 dark:text-white leading-tight">
-                  {post.author?.name || 'The News Report'}
+                  {post.author?.name || t('theNewsReport')}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">{publishedDate}</p>
               </div>

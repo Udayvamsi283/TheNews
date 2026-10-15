@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Category, Post } from '../../types';
 import { ArrowRight, Clock, Lock } from 'lucide-react';
 import { ArticleImagePlaceholder } from '../common/ArticleImagePlaceholder';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface CategorySectionProps {
   category: Category;
@@ -10,7 +11,10 @@ interface CategorySectionProps {
 }
 
 export const CategorySection: React.FC<CategorySectionProps> = ({ category, posts }) => {
+  const { t, getCategoryName } = useLanguage();
   if (!posts || posts.length === 0) return null;
+
+  const categoryTitle = getCategoryName(category.slug, category.name);
 
   return (
     <section className="my-12">
@@ -19,14 +23,14 @@ export const CategorySection: React.FC<CategorySectionProps> = ({ category, post
         <div className="flex items-center gap-3">
           <span className="w-2.5 h-2.5 rounded-full bg-editorial-red" />
           <h3 className="text-2xl font-black font-serif text-navy-900 dark:text-white tracking-tight">
-            {category.name}
+            {categoryTitle}
           </h3>
         </div>
         <Link
           to={`/category/${category.slug}`}
           className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-editorial-red dark:text-editorial-red-dark hover:underline transition-colors"
         >
-          <span>More in {category.name}</span>
+          <span>{t('moreIn')} {categoryTitle}</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
@@ -57,11 +61,11 @@ export const CategorySection: React.FC<CategorySectionProps> = ({ category, post
                       loading="lazy"
                     />
                   ) : (
-                    <ArticleImagePlaceholder category={category.name} className="h-full aspect-[16/10]" />
+                    <ArticleImagePlaceholder category={categoryTitle} className="h-full aspect-[16/10]" />
                   )}
                   {post.registeredOnly && (
                     <div className="absolute top-3 left-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-navy-950/85 backdrop-blur text-amber-300 border border-amber-400/20">
-                      <Lock className="w-3 h-3" /> Exclusive
+                      <Lock className="w-3 h-3" /> {t('exclusive')}
                     </div>
                   )}
                   {post.postFormat && post.postFormat !== 'article' && (
@@ -88,7 +92,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({ category, post
 
               <div className="px-5 pb-5 pt-0 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-navy-800/60 pt-3">
                 <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[140px]">
-                  {post.author?.name || 'The News Report'}
+                  {post.author?.name || t('theNewsReport')}
                 </span>
                 <span className="flex items-center gap-1 font-mono text-[11px]">
                   <Clock className="w-3 h-3 text-slate-400" />

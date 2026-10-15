@@ -7,6 +7,7 @@ export interface User {
   name: string;
   email: string;
   avatar?: string;
+  avatarPublicId?: string;
   role: UserRole;
   preferredLanguage: string;
   interests?: Category[] | string[];

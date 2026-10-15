@@ -9,6 +9,7 @@ export interface IUser extends Document {
   email: string;
   passwordHash: string;
   avatar: string;
+  avatarPublicId?: string;
   role: UserRole;
   preferredLanguage: string;
   interests: mongoose.Types.ObjectId[];
@@ -41,6 +42,11 @@ const userSchema = new Schema<IUser>(
       select: false
     },
     avatar: {
+      type: String,
+      default: '',
+      trim: true
+    },
+    avatarPublicId: {
       type: String,
       default: '',
       trim: true

@@ -2,6 +2,8 @@ import { Router } from 'express';
 import {
   getProfile,
   updateProfile,
+  uploadAvatar,
+  removeAvatar,
   changePassword,
   updatePreferences,
   listUsers,
@@ -11,12 +13,15 @@ import {
 } from '../controllers/user.controller.js';
 import { getUserBookmarks, getUserLikes } from '../controllers/engagement.controller.js';
 import { authenticate, requireRole } from '../middleware/auth.middleware.js';
+import { avatarUpload } from '../middleware/upload.middleware.js';
 
 const router = Router();
 
 // Authenticated current user routes
 router.get('/me', authenticate, getProfile);
 router.patch('/me', authenticate, updateProfile);
+router.post('/me/avatar', authenticate, avatarUpload.single('avatar'), uploadAvatar);
+router.delete('/me/avatar', authenticate, removeAvatar);
 router.patch('/me/preferences', authenticate, updatePreferences);
 router.get('/me/bookmarks', authenticate, getUserBookmarks);
 router.get('/me/likes', authenticate, getUserLikes);

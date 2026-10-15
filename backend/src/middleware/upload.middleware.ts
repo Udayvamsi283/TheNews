@@ -47,3 +47,27 @@ export const upload = multer({
   },
   fileFilter
 });
+
+// Strict avatar upload: JPEG, PNG, and WebP only. Reject SVG or arbitrary files. Limit to 5MB.
+const ALLOWED_AVATAR_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+const avatarFileFilter = (
+  _req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+) => {
+  if (ALLOWED_AVATAR_MIME_TYPES.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error(`Invalid image format: ${file.mimetype}. Only JPEG, PNG, and WebP images are permitted for profile avatars.`));
+  }
+};
+
+export const avatarUpload = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB
+  },
+  fileFilter: avatarFileFilter
+});
+

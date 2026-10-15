@@ -2,6 +2,8 @@ import { Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import { User } from '../models/user.model.js';
 import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
+import { uploadToCloudinary, deleteFromCloudinary } from '../config/cloudinary.js';
+import { logger } from '../utils/logger.js';
 import {
   updateProfileSchema,
   changePasswordSchema,
@@ -32,22 +34,160 @@ export const updateProfile = async (
   try {
     const validatedData = updateProfileSchema.parse(req.body);
 
-    const user = await User.findByIdAndUpdate(
-      req.user!._id,
-      {
-        $set: {
-          ...(validatedData.name && { name: validatedData.name }),
-          ...(validatedData.avatar !== undefined && { avatar: validatedData.avatar }),
-          ...(validatedData.preferredLanguage && { preferredLanguage: validatedData.preferredLanguage }),
-          ...(validatedData.interests && { interests: validatedData.interests })
-        }
-      },
-      { new: true, runValidators: true }
-    ).populate('interests', 'name slug');
+    const currentUser = await User.findById(req.user!._id);
+    if (!currentUser) {
+      res.status(404).json({ success: false, message: 'User not found.' });
+      return;
+    }
+
+    // If avatar is explicitly cleared or changed and user had an owned Cloudinary avatar, clean it up safely
+    if (
+      validatedData.avatar !== undefined &&
+      validatedData.avatar !== currentUser.avatar &&
+      currentUser.avatarPublicId &&
+      currentUser.avatarPublicId.startsWith('the-news/avatars/')
+    ) {
+      try {
+        await deleteFromCloudinary(currentUser.avatarPublicId, 'image');
+      } catch (delErr) {
+        logger.error(`Failed to delete previous avatar asset [${currentUser.avatarPublicId}]:`, delErr);
+      }
+      currentUser.avatarPublicId = '';
+    }
+
+    if (validatedData.name) currentUser.name = validatedData.name;
+    if (validatedData.avatar !== undefined) currentUser.avatar = validatedData.avatar;
+    if (validatedData.preferredLanguage) currentUser.preferredLanguage = validatedData.preferredLanguage;
+    if (validatedData.interests) (currentUser as any).interests = validatedData.interests;
+
+    await currentUser.save();
+    await currentUser.populate('interests', 'name slug');
 
     res.status(200).json({
       success: true,
       message: 'Profile updated successfully.',
+      data: { user: currentUser }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadAvatar = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.file) {
+      res.status(400).json({
+        success: false,
+        message: 'No image file was provided for avatar upload.'
+      });
+      return;
+    }
+
+    const file = req.file;
+
+    // Validate MIME type strictly (JPEG, PNG, WebP only)
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedMimes.includes(file.mimetype)) {
+      res.status(400).json({
+        success: false,
+        message: `Unsupported image format: ${file.mimetype}. Only JPEG, PNG, and WebP are allowed.`
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    const maxSizeBytes = 5 * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      res.status(400).json({
+        success: false,
+        message: 'Profile image size exceeds 5 MB limit.'
+      });
+      return;
+    }
+
+    const user = await User.findById(req.user!._id);
+    if (!user) {
+      res.status(404).json({ success: false, message: 'User not found.' });
+      return;
+    }
+
+    // Sanitize filename
+    const cleanOriginalName = file.originalname
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[^a-zA-Z0-9_-]/g, '_');
+    const folder = 'the-news/avatars';
+    const publicId = `avatar_${user._id}_${Date.now()}`;
+
+    // Upload to Cloudinary using existing server-side configuration
+    const uploadResult = await uploadToCloudinary(file.buffer, {
+      folder,
+      publicId,
+      resourceType: 'image'
+    });
+
+    // Clean up previous owned Cloudinary avatar if present
+    const oldPublicId = user.avatarPublicId;
+    if (oldPublicId && oldPublicId.startsWith('the-news/avatars/')) {
+      try {
+        await deleteFromCloudinary(oldPublicId, 'image');
+      } catch (delErr) {
+        logger.error(`Failed to clean up old avatar asset [${oldPublicId}]:`, delErr);
+      }
+    }
+
+    user.avatar = uploadResult.secureUrl;
+    user.avatarPublicId = uploadResult.publicId;
+    await user.save();
+    await user.populate('interests', 'name slug');
+
+    logger.info(`Profile picture updated for user ${user._id} (${uploadResult.publicId})`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile picture uploaded successfully.',
+      data: { user }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const removeAvatar = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const user = await User.findById(req.user!._id);
+    if (!user) {
+      res.status(404).json({ success: false, message: 'User not found.' });
+      return;
+    }
+
+    // Clean up Cloudinary asset if it is an owned profile image
+    const oldPublicId = user.avatarPublicId;
+    if (oldPublicId && oldPublicId.startsWith('the-news/avatars/')) {
+      try {
+        await deleteFromCloudinary(oldPublicId, 'image');
+      } catch (delErr) {
+        logger.error(`Failed to clean up avatar asset on removal [${oldPublicId}]:`, delErr);
+      }
+    }
+
+    user.avatar = '';
+    user.avatarPublicId = '';
+    await user.save();
+    await user.populate('interests', 'name slug');
+
+    logger.info(`Profile picture removed for user ${user._id}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile picture removed successfully.',
       data: { user }
     });
   } catch (error) {

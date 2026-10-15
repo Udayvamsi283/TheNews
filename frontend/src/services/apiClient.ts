@@ -161,6 +161,23 @@ class ApiClient {
     return res.data.user;
   }
 
+  public async uploadAvatar(file: File): Promise<User> {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    const res = await this.request<{ success: boolean; data: { user: User } }>('/users/me/avatar', {
+      method: 'POST',
+      body: formData
+    });
+    return res.data.user;
+  }
+
+  public async removeAvatar(): Promise<User> {
+    const res = await this.request<{ success: boolean; data: { user: User } }>('/users/me/avatar', {
+      method: 'DELETE'
+    });
+    return res.data.user;
+  }
+
   public async changePassword(
     param1: string | { currentPassword: string; newPassword: string },
     param2?: string
@@ -524,11 +541,26 @@ class ApiClient {
     return res.data;
   }
 
-  public async getPostBySlug(slug: string, lang?: string): Promise<{ post: Post; isGated?: boolean }> {
+  public async getPostBySlug(
+    slug: string,
+    lang?: string
+  ): Promise<{
+    post: Post;
+    isGated?: boolean;
+    relatedPosts?: Post[];
+    prevPost?: Post | null;
+    nextPost?: Post | null;
+  }> {
     const url = `/public/posts/${slug}${lang ? `?lang=${encodeURIComponent(lang)}` : ''}`;
     const res = await this.request<{
       success: boolean;
-      data: { post: Post; isGated?: boolean };
+      data: {
+        post: Post;
+        isGated?: boolean;
+        relatedPosts?: Post[];
+        prevPost?: Post | null;
+        nextPost?: Post | null;
+      };
     }>(url);
     return res.data;
   }

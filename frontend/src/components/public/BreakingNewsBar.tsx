@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Post } from '../../types';
 import { AlertCircle, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface BreakingNewsBarProps {
   breakingPosts: Post[];
 }
 
 export const BreakingNewsBar: React.FC<BreakingNewsBarProps> = ({ breakingPosts }) => {
+  const { t } = useLanguage();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissed, setDismissed] = useState(false);
 
@@ -33,7 +35,7 @@ export const BreakingNewsBar: React.FC<BreakingNewsBarProps> = ({ breakingPosts 
         <div className="flex items-center gap-3 overflow-hidden flex-1">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-black tracking-wider uppercase bg-white text-red-700 animate-pulse flex-shrink-0">
             <AlertCircle className="w-3.5 h-3.5" />
-            Breaking
+            {t('breaking')}
           </span>
 
           <Link

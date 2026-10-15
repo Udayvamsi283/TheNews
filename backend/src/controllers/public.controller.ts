@@ -195,6 +195,8 @@ export const getFeed = async (req: AuthenticatedRequest, res: Response, next: Ne
     const now = new Date();
     const publishedQuery = { status: 'published', publishedAt: { $lte: now } };
 
+    const targetLang = ((req.query.language || req.query.lang || user?.preferredLanguage || '') as string).toLowerCase().trim();
+
     // Guest Readers: Purely chronological latest published dispatches
     if (!user) {
       const [total, posts] = await Promise.all([
@@ -206,15 +208,17 @@ export const getFeed = async (req: AuthenticatedRequest, res: Response, next: Ne
           .populate('category', 'name slug')
           .populate('language', 'name code')
           .populate('author', 'name avatar')
-          .select('title slug summary featuredImage category language author publishedAt postFormat readingTime views likeCount commentCount')
+          .select('title slug summary featuredImage category language author publishedAt postFormat readingTime views likeCount commentCount translations')
       ]);
+
+      const localizedPosts = posts.map((p) => localizePost(p, targetLang));
 
       res.status(200).json({
         success: true,
         data: {
           feedType: 'chronological',
           isPersonalized: false,
-          posts,
+          posts: localizedPosts,
           pagination: { page, limit, total, pages: Math.ceil(total / limit) }
         }
       });
@@ -258,12 +262,13 @@ export const getFeed = async (req: AuthenticatedRequest, res: Response, next: Ne
       }
 
       // 2. Language Match (+30 points for primary or translated version)
+      const effectiveLang = targetLang || userPrefLang;
       const postLangCode = (post.language as any)?.code?.toLowerCase();
       const hasTranslation = (post.translations || []).some(
-        (t: any) => t.languageCode?.toLowerCase() === userPrefLang
+        (t: any) => t.languageCode?.toLowerCase() === effectiveLang
       );
 
-      if (postLangCode === userPrefLang || hasTranslation) {
+      if (postLangCode === effectiveLang || hasTranslation) {
         score += 30;
       } else if (postLangCode === 'en') {
         score += 10; // Platform default fallback
@@ -289,7 +294,7 @@ export const getFeed = async (req: AuthenticatedRequest, res: Response, next: Ne
     const total = scoredPosts.length;
     const paginatedPosts = scoredPosts
       .slice(skip, skip + limit)
-      .map((item) => item.post);
+      .map((item) => localizePost(item.post, targetLang));
 
     res.status(200).json({
       success: true,
@@ -403,19 +408,84 @@ export const getPostBySlug = async (req: AuthenticatedRequest, res: Response, ne
       if (voteDoc) userVotedOptionId = voteDoc.optionId;
     }
 
-    // 5. Related Articles (same category, published, exclude current)
-    const relatedPosts = await Post.find({
+    // 5. Related Articles with Priority:
+    // Selection priority:
+    // 1. Same category and overlapping tags
+    // 2. Same category
+    // 3. Other relevant recent published stories
+    const currentTagIds = (post.tags || []).map((t: any) =>
+      (typeof t === 'object' && t._id ? t._id.toString() : t.toString())
+    );
+    const categoryId = (post.category as any)?._id?.toString() || post.category?.toString();
+
+    const candidateRelated = await Post.find({
       status: 'published',
       publishedAt: { $lte: now },
-      category: (post.category as any)?._id || post.category,
       _id: { $ne: post._id }
     })
-      .sort({ publishedAt: -1 })
-      .limit(3)
       .populate('category', 'name slug')
-      .select('title slug summary featuredImage publishedAt postFormat');
+      .populate('tags', 'name slug')
+      .populate('language', 'name code')
+      .populate('author', 'name avatar')
+      .select('title slug summary featuredImage category tags language author publishedAt postFormat readingTime translations')
+      .limit(30);
 
-    // 6. Available Translations Manifest
+    const scoredRelated = candidateRelated.map((p) => {
+      const pCatId = (p.category as any)?._id?.toString() || p.category?.toString();
+      const isSameCategory = Boolean(categoryId && pCatId === categoryId);
+      const pTagIds = (p.tags || []).map((t: any) =>
+        (typeof t === 'object' && t._id ? t._id.toString() : t.toString())
+      );
+      const overlappingTagCount = pTagIds.filter((id) => currentTagIds.includes(id)).length;
+
+      let score = 0;
+      if (isSameCategory && overlappingTagCount > 0) {
+        score = 100 + overlappingTagCount * 10;
+      } else if (isSameCategory) {
+        score = 50;
+      } else if (overlappingTagCount > 0) {
+        score = 25 + overlappingTagCount * 5;
+      } else {
+        score = 10;
+      }
+      return { post: p, score };
+    });
+
+    scoredRelated.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      const bTime = b.post.publishedAt ? new Date(b.post.publishedAt).getTime() : 0;
+      const aTime = a.post.publishedAt ? new Date(a.post.publishedAt).getTime() : 0;
+      return bTime - aTime;
+    });
+
+    const localizedRelated = scoredRelated
+      .slice(0, 4)
+      .map(({ post: p }) => localizePost(p, userPrefLang));
+
+    // 6. Chronological Previous / Next Article Navigation (ordered by publishedAt)
+    const [prevPostDoc, nextPostDoc] = await Promise.all([
+      Post.findOne({
+        status: 'published',
+        publishedAt: { $lt: post.publishedAt }
+      })
+        .sort({ publishedAt: -1 })
+        .populate('category', 'name slug')
+        .populate('language', 'name code')
+        .select('title slug summary featuredImage category language publishedAt translations postFormat readingTime'),
+      Post.findOne({
+        status: 'published',
+        publishedAt: { $gt: post.publishedAt, $lte: now }
+      })
+        .sort({ publishedAt: 1 })
+        .populate('category', 'name slug')
+        .populate('language', 'name code')
+        .select('title slug summary featuredImage category language publishedAt translations postFormat readingTime')
+    ]);
+
+    const prevPost = prevPostDoc ? localizePost(prevPostDoc, userPrefLang) : null;
+    const nextPost = nextPostDoc ? localizePost(nextPostDoc, userPrefLang) : null;
+
+    // 7. Available Translations Manifest
     const availableTranslations = (post.translations || []).map((t) => ({
       languageCode: t.languageCode,
       title: t.title,
@@ -471,7 +541,9 @@ export const getPostBySlug = async (req: AuthenticatedRequest, res: Response, ne
         isLiked: isLikedByUser,
         isSaved: isBookmarkedByUser,
         isBookmarked: isBookmarkedByUser,
-        relatedPosts
+        relatedPosts: localizedRelated,
+        prevPost,
+        nextPost
       }
     });
   } catch (error) {

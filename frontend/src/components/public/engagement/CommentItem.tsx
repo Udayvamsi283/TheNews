@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Comment } from '../../../types';
-import { Trash2, ShieldCheck, User as UserIcon } from 'lucide-react';
+import { Trash2, ShieldCheck } from 'lucide-react';
+import { Avatar } from '../../ui/Avatar';
 
 interface CommentItemProps {
   comment: Comment;
@@ -64,17 +65,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
     <div className="py-4 border-b border-gray-100 dark:border-gray-800/80 last:border-b-0 space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {comment.user?.avatar ? (
-            <img
-              src={comment.user.avatar}
-              alt={comment.user.name}
-              className="w-8 h-8 rounded-full object-cover ring-1 ring-gray-200 dark:ring-gray-700"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 dark:bg-primary-950 dark:text-primary-300 font-semibold text-xs flex items-center justify-center">
-              {comment.user?.name ? comment.user.name.charAt(0).toUpperCase() : <UserIcon className="w-4 h-4" />}
-            </div>
-          )}
+          <Avatar name={comment.user?.name} src={comment.user?.avatar} size="sm" />
 
           <div>
             <div className="flex items-center gap-2">

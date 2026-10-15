@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../services/apiClient';
 import { useAuth } from '../hooks/useAuth';
@@ -8,13 +8,19 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Avatar } from '../components/ui/Avatar';
 import { Badge } from '../components/ui/Badge';
-import { User as UserIcon, Mail, Lock, Globe, Heart, Shield, Check, Save } from 'lucide-react';
+import { User as UserIcon, Mail, Lock, Globe, Heart, Shield, Check, Save, Camera, Upload, Trash2, X } from 'lucide-react';
 import { Category, Language } from '../types';
 
 export const ProfilePage: React.FC = () => {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, uploadAvatar, removeAvatar } = useAuth();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isRemovingAvatar, setIsRemovingAvatar] = useState(false);
 
   const normalizeInterests = (interests?: (Category | string)[]): string[] => {
     if (!interests) return [];
@@ -23,9 +29,17 @@ export const ProfilePage: React.FC = () => {
 
   // Profile Form State
   const [name, setName] = useState(user?.name || '');
-  const [avatar, setAvatar] = useState(user?.avatar || '');
   const [preferredLanguage, setPreferredLanguage] = useState(user?.preferredLanguage || 'en');
   const [selectedInterests, setSelectedInterests] = useState<string[]>(normalizeInterests(user?.interests));
+
+  // Clean up object URL when component unmounts or previewUrl changes
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   // Password Change State
   const [currentPassword, setCurrentPassword] = useState('');
@@ -37,11 +51,95 @@ export const ProfilePage: React.FC = () => {
   useEffect(() => {
     if (user) {
       setName(user.name);
-      setAvatar(user.avatar || '');
       setPreferredLanguage(user.preferredLanguage || 'en');
       setSelectedInterests(normalizeInterests(user.interests));
     }
   }, [user]);
+
+  // Handle local device image file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type: JPEG, PNG, WebP only. Reject SVG or arbitrary files.
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      showToast('Unsupported file type. Please select a JPEG, PNG, or WebP image. SVG and arbitrary files are not supported.', 'error');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // Validate file size: 5MB limit
+    const maxSizeBytes = 5 * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      showToast('Image size exceeds 5 MB. Please select a smaller photo.', 'error');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // Revoke previous preview URL if any
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setSelectedFile(file);
+    setPreviewUrl(objectUrl);
+    showToast('Photo selected. Click "Save Photo" to apply.', 'info');
+  };
+
+  const handleSaveAvatar = async () => {
+    if (!selectedFile) return;
+
+    setIsUploadingAvatar(true);
+    try {
+      await uploadAvatar(selectedFile);
+      showToast('Profile picture uploaded successfully!', 'success');
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      refreshUser();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to upload profile picture';
+      showToast(message, 'error');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleCancelPreview = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!user?.avatar) return;
+
+    setIsRemovingAvatar(true);
+    try {
+      await removeAvatar();
+      showToast('Profile picture removed successfully.', 'success');
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      refreshUser();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to remove profile picture';
+      showToast(message, 'error');
+    } finally {
+      setIsRemovingAvatar(false);
+    }
+  };
 
   // Fetch available languages
   const { data: languages = [] } = useQuery<Language[]>({
@@ -57,7 +155,7 @@ export const ProfilePage: React.FC = () => {
 
   // Profile update mutation
   const updateProfileMutation = useMutation({
-    mutationFn: (data: { name?: string; avatar?: string; preferredLanguage?: string; interests?: string[] }) =>
+    mutationFn: (data: { name?: string; preferredLanguage?: string; interests?: string[] }) =>
       apiClient.updateProfile(data),
     onSuccess: (updatedUser) => {
       showToast('Profile updated successfully!', 'success');
@@ -78,7 +176,6 @@ export const ProfilePage: React.FC = () => {
     }
     updateProfileMutation.mutate({
       name: name.trim(),
-      avatar: avatar.trim() || undefined,
       preferredLanguage,
       interests: selectedInterests
     });
@@ -127,7 +224,7 @@ export const ProfilePage: React.FC = () => {
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-navy-750 mb-8">
         <div className="flex items-center gap-4">
-          <Avatar name={user.name} src={avatar || user.avatar} size="lg" />
+          <Avatar name={user.name} src={previewUrl || user.avatar} size="lg" />
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
@@ -160,6 +257,101 @@ export const ProfilePage: React.FC = () => {
               <span>Personal Information</span>
             </h2>
 
+            {/* Profile Picture Device Upload Section */}
+            <div className="p-5 rounded-2xl border border-slate-200 dark:border-navy-750 bg-slate-50/70 dark:bg-navy-900/60 mb-6">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+                {/* Photo Preview */}
+                <div className="relative group shrink-0">
+                  <Avatar
+                    name={user.name}
+                    src={previewUrl || user.avatar}
+                    size="xl"
+                    className="w-24 h-24 text-xl ring-4 ring-white dark:ring-navy-800 shadow-md"
+                  />
+                  {previewUrl && (
+                    <span className="absolute -bottom-1 -right-1 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-xs">
+                      Preview
+                    </span>
+                  )}
+                </div>
+
+                {/* Upload & Action Controls */}
+                <div className="flex-1 text-center sm:text-left space-y-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Profile Photo</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      {previewUrl
+                        ? `New image ready: ${selectedFile?.name} (${Math.round((selectedFile?.size || 0) / 1024)} KB). Click "Save Photo" to apply.`
+                        : 'Upload a portrait photo from your device. Supported: JPEG, PNG, WebP (max 5 MB).'}
+                    </p>
+                  </div>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+                    {previewUrl ? (
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={handleSaveAvatar}
+                          isLoading={isUploadingAvatar}
+                          leftIcon={<Upload className="w-3.5 h-3.5" />}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        >
+                          Save Photo
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleCancelPreview}
+                          disabled={isUploadingAvatar}
+                          leftIcon={<X className="w-3.5 h-3.5" />}
+                        >
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={user.avatar ? 'outline' : 'primary'}
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploadingAvatar || isRemovingAvatar}
+                          leftIcon={<Camera className="w-3.5 h-3.5" />}
+                        >
+                          {user.avatar ? 'Replace Photo' : 'Upload Photo'}
+                        </Button>
+
+                        {user.avatar && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleRemoveAvatar}
+                            isLoading={isRemovingAvatar}
+                            disabled={isUploadingAvatar || isRemovingAvatar}
+                            leftIcon={<Trash2 className="w-3.5 h-3.5 text-editorial-red" />}
+                            className="text-editorial-red hover:bg-editorial-red/10 dark:hover:bg-editorial-red/20"
+                          >
+                            Remove Photo
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <form onSubmit={handleProfileSubmit} className="space-y-4">
               <Input
                 label="Full Name"
@@ -175,14 +367,6 @@ export const ProfilePage: React.FC = () => {
                 disabled
                 helperText="Email address cannot be changed."
                 leftIcon={<Mail className="w-4 h-4" />}
-              />
-
-              <Input
-                label="Avatar URL (Optional)"
-                value={avatar}
-                onChange={(e) => setAvatar(e.target.value)}
-                placeholder="https://example.com/avatar.jpg"
-                helperText="Link to a public portrait image."
               />
 
               {/* Preferred Language */}

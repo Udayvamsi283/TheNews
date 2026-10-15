@@ -13,7 +13,7 @@ import { useLanguage } from '../context/LanguageContext';
 
 export const HomePage: React.FC = () => {
   const [feedFilter, setFeedFilter] = useState<'for-you' | 'all'>('for-you');
-  const { currentLanguage } = useLanguage();
+  const { currentLanguage, t } = useLanguage();
 
   // Dynamic SEO metadata
   useEffect(() => {
@@ -74,10 +74,10 @@ export const HomePage: React.FC = () => {
           <div className="py-24 text-center max-w-lg mx-auto space-y-3">
             <Newspaper className="w-12 h-12 text-slate-300 dark:text-navy-700 mx-auto" />
             <h2 className="text-xl font-bold font-serif text-navy-900 dark:text-white">
-              No stories have been published yet.
+              {t('noStoriesPublished')}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Articles and breaking alerts will appear here as soon as they are published by the editorial team.
+              {t('emptyStateHelp')}
             </p>
           </div>
         ) : (
@@ -101,14 +101,14 @@ export const HomePage: React.FC = () => {
                         <div className="flex items-center gap-3">
                           <span className="w-2.5 h-2.5 rounded-full bg-editorial-red" />
                           <h3 className="text-xl sm:text-2xl font-black font-serif text-navy-900 dark:text-white">
-                            Featured Stories
+                            {t('featuredStories')}
                           </h3>
                         </div>
                         <Link
                           to="/latest"
                           className="text-xs font-bold uppercase tracking-wider text-editorial-red dark:text-editorial-red-dark hover:underline flex items-center gap-1"
                         >
-                          <span>Full Wire</span>
+                          <span>{t('fullWire')}</span>
                           <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                       </div>
@@ -128,7 +128,7 @@ export const HomePage: React.FC = () => {
                         <div className="flex items-center gap-2.5">
                           <Radio className="w-4 h-4 text-editorial-red animate-pulse" />
                           <h3 className="text-xl sm:text-2xl font-black font-serif text-navy-900 dark:text-white">
-                            Latest Dispatches
+                            {t('latestDispatches')}
                           </h3>
                         </div>
 
@@ -142,7 +142,7 @@ export const HomePage: React.FC = () => {
                                 : 'text-slate-600 dark:text-slate-400 hover:text-navy-900 dark:hover:text-white'
                             }`}
                           >
-                            For You
+                            {t('forYou')}
                           </button>
                           <button
                             type="button"
@@ -153,7 +153,7 @@ export const HomePage: React.FC = () => {
                                 : 'text-slate-600 dark:text-slate-400 hover:text-navy-900 dark:hover:text-white'
                             }`}
                           >
-                            Chronological
+                            {t('chronological')}
                           </button>
                         </div>
                       </div>
@@ -174,13 +174,13 @@ export const HomePage: React.FC = () => {
                       <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 pb-3">
                         <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
                           <Flame className="w-4 h-4 fill-amber-500/20 text-amber-500" />
-                          <span>Trending This Week</span>
+                          <span>{t('trendingThisWeek')}</span>
                         </div>
                         <Link
                           to="/trending"
                           className="text-xs font-bold uppercase tracking-wider text-editorial-red dark:text-editorial-red-dark hover:underline"
                         >
-                          Top 10 →
+                          {t('top10')}
                         </Link>
                       </div>
 
@@ -201,17 +201,17 @@ export const HomePage: React.FC = () => {
                   {/* Editorial Mission Card to balance vertical space */}
                   <div className="rounded-2xl border border-slate-200/90 dark:border-navy-700/80 bg-slate-100/60 dark:bg-navy-900/60 p-5 space-y-3">
                     <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                      Editorial Charter
+                      {t('editorialCharter')}
                     </span>
                     <h4 className="text-base font-bold font-serif text-navy-900 dark:text-white leading-snug">
-                      Independent Public-Interest Reporting
+                      {t('charterHeadline')}
                     </h4>
                     <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-sans">
-                      The News Report delivers verifiable, fact-based dispatches across international affairs, science, policy, and cultural shifts.
+                      {t('charterBody')}
                     </p>
                     <div className="pt-2 flex items-center justify-between text-xs font-bold">
                       <Link to="/latest" className="text-editorial-red hover:underline">
-                        Explore Full Archive →
+                        {t('exploreFullArchive')}
                       </Link>
                     </div>
                   </div>
@@ -231,14 +231,14 @@ export const HomePage: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <span className="w-2.5 h-2.5 rounded-full bg-editorial-red" />
                     <h3 className="text-2xl font-black font-serif text-navy-900 dark:text-white">
-                      More Stories From Today
+                      {t('moreStoriesFromToday')}
                     </h3>
                   </div>
                   <Link
                     to="/latest"
                     className="text-xs font-bold uppercase tracking-wider text-editorial-red hover:underline"
                   >
-                    View All →
+                    {t('viewAll')}
                   </Link>
                 </div>
 

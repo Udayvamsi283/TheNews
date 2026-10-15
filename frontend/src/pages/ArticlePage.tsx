@@ -26,8 +26,12 @@ import { PollRenderer } from '../components/public/format-renderers/PollRenderer
 import { EventRenderer } from '../components/public/format-renderers/EventRenderer';
 import { CompactArticleItem } from '../components/public/CompactArticleItem';
 import { ArticleCard } from '../components/public/ArticleCard';
+import { ArticleNavigation } from '../components/public/ArticleNavigation';
+import { TrendingTagsWidget } from '../components/public/TrendingTagsWidget';
+import { SocialFollowBar } from '../components/public/SocialFollowBar';
 import { updateSeoMetadata } from '../utils/seo';
 import { useToast } from '../components/ui/Toast';
+import { Avatar } from '../components/ui/Avatar';
 import { useLanguage } from '../context/LanguageContext';
 
 export const ArticlePage: React.FC = () => {
@@ -80,6 +84,9 @@ export const ArticlePage: React.FC = () => {
   // Priority 3: Latest published articles (excluding current and already chosen related)
   const relatedArticles = useMemo(() => {
     if (!post) return [];
+    if (data?.relatedPosts && data.relatedPosts.length > 0) {
+      return data.relatedPosts.filter((p) => p._id !== post._id && p.slug !== post.slug);
+    }
     const currentPostTags = (post.tags || []).map((t: any) =>
       (typeof t === 'string' ? t : t.name || t.slug || '').toLowerCase()
     );
@@ -101,7 +108,7 @@ export const ArticlePage: React.FC = () => {
     });
 
     return sorted.slice(0, 4);
-  }, [post, categoryData]);
+  }, [post, data?.relatedPosts, categoryData]);
 
   const latestArticles = useMemo(() => {
     if (!post) return [];
@@ -295,26 +302,16 @@ export const ArticlePage: React.FC = () => {
             {/* Byline & Engagement Row */}
             <div className="pt-4 border-y border-slate-200 dark:border-navy-800 flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                {post.author?.avatar ? (
-                  <img
-                    src={post.author.avatar}
-                    alt={post.author.name}
-                    className="w-10 h-10 rounded-full object-cover ring-2 ring-slate-200 dark:ring-navy-700"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-slate-200 text-navy-900 dark:bg-navy-800 dark:text-slate-200 font-bold flex items-center justify-center text-sm">
-                    {post.author?.name ? post.author.name.charAt(0).toUpperCase() : 'N'}
-                  </div>
-                )}
+                <Avatar src={post.author?.avatar} name={post.author?.name} size="md" />
                 <div>
                   <div className="text-sm font-bold text-navy-900 dark:text-white">
-                    By {post.author?.name || 'The News Report'}
+                    {t('by')} {post.author?.name || t('theNewsReport')}
                   </div>
                   <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
                     <span>{publishedDate}</span>
                     <span>•</span>
                     <span className="flex items-center gap-1 font-mono">
-                      <Clock className="w-3 h-3" /> {readingTime} min read
+                      <Clock className="w-3 h-3" /> {readingTime} {t('minRead')}
                     </span>
                   </div>
                 </div>
@@ -333,7 +330,8 @@ export const ArticlePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleShare}
-                  title="Share article"
+                  title={t('shareStory')}
+                  aria-label={t('shareStory')}
                   className="p-2 rounded-full border border-slate-200 dark:border-navy-750 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors"
                 >
                   <Share2 className="w-4 h-4" />
@@ -458,29 +456,48 @@ export const ArticlePage: React.FC = () => {
           {post.tags && post.tags.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 pt-6">
               <TagIcon className="w-4 h-4 text-slate-400" />
-              {post.tags.map((tag: any) => (
-                <span
-                  key={tag._id || tag}
-                  className="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-navy-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition-colors"
-                >
-                  #{tag.name || tag}
-                </span>
-              ))}
+              {post.tags.map((tag: any) => {
+                const tagName = typeof tag === 'string' ? tag : tag.name || tag.slug;
+                return (
+                  <Link
+                    key={tag._id || tagName}
+                    to={`/search?q=${encodeURIComponent(tagName)}`}
+                    className="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-navy-800 text-slate-700 dark:text-slate-300 hover:bg-editorial-red/10 hover:text-editorial-red dark:hover:bg-editorial-red/20 dark:hover:text-editorial-red-dark transition-colors"
+                  >
+                    #{tagName}
+                  </Link>
+                );
+              })}
             </div>
           )}
+
+          {/* Previous / Next Article Navigation (Ordered chronologically by publication date) */}
+          <ArticleNavigation
+            prevPost={data?.prevPost}
+            nextPost={data?.nextPost}
+          />
+
+          {/* Inline Follow Us Social Bar */}
+          <SocialFollowBar variant="inline" className="my-8" />
 
           {/* Reader Comments Section */}
           <CommentSection postId={post._id} initialCommentCount={post.commentCount || 0} />
         </article>
 
         {/* Desktop Reading Sidebar (Col 4 - Sticky) */}
-        <aside className="hidden lg:block lg:col-span-4 sticky top-28 space-y-8">
+        <aside className="hidden lg:block lg:col-span-4 sticky top-28 space-y-6">
+          {/* Follow Us Module */}
+          <SocialFollowBar variant="sidebar" />
+
+          {/* Trending Topics / Tags */}
+          <TrendingTagsWidget articleTags={post.tags} limit={12} />
+
           {/* Related Stories */}
           {relatedArticles.length > 0 && (
             <div className="rounded-2xl border border-slate-200/90 dark:border-navy-700/80 bg-white dark:bg-navy-900 p-5 shadow-xs space-y-3">
               <div className="flex items-center gap-2 border-b border-slate-100 dark:border-navy-800 pb-3 text-xs font-black uppercase tracking-wider text-navy-900 dark:text-white">
                 <Sparkles className="w-4 h-4 text-editorial-red" />
-                <span>Related Dispatches</span>
+                <span>{t('relatedStories')}</span>
               </div>
 
               <div className="divide-y divide-slate-100 dark:divide-navy-800/70">
@@ -502,13 +519,13 @@ export const ArticlePage: React.FC = () => {
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-navy-800 pb-3">
                 <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-navy-900 dark:text-white">
                   <Radio className="w-4 h-4 text-editorial-red animate-pulse" />
-                  <span>Latest News Wire</span>
+                  <span>{t('latestNews')}</span>
                 </div>
                 <Link
                   to="/latest"
                   className="text-xs font-bold uppercase tracking-wider text-editorial-red dark:text-editorial-red-dark hover:underline"
                 >
-                  Full Wire →
+                  {t('fullWire')} →
                 </Link>
               </div>
 
@@ -528,12 +545,16 @@ export const ArticlePage: React.FC = () => {
       </div>
 
       {/* Mobile/Tablet Stacked Recommendations (<1024px) */}
-      <div className="lg:hidden mt-16 pt-10 border-t border-slate-200 dark:border-navy-800 space-y-12">
+      <div className="lg:hidden mt-16 pt-10 border-t border-slate-200 dark:border-navy-800 space-y-10">
+        {/* Mobile Trending Topics */}
+        <TrendingTagsWidget articleTags={post.tags} limit={10} />
+
+        {/* Mobile Related Stories */}
         {relatedArticles.length > 0 && (
           <section className="space-y-6">
             <div className="flex items-center gap-2 text-xl font-bold font-serif text-navy-900 dark:text-white">
               <Sparkles className="w-5 h-5 text-editorial-red" />
-              <span>Related Dispatches</span>
+              <span>{t('relatedStories')}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {relatedArticles.map((rel) => (
@@ -543,18 +564,19 @@ export const ArticlePage: React.FC = () => {
           </section>
         )}
 
+        {/* Mobile Latest News */}
         {latestArticles.length > 0 && (
           <section className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xl font-bold font-serif text-navy-900 dark:text-white">
                 <Radio className="w-5 h-5 text-editorial-red" />
-                <span>Latest News Wire</span>
+                <span>{t('latestNews')}</span>
               </div>
               <Link
                 to="/latest"
                 className="text-xs font-bold uppercase tracking-wider text-editorial-red hover:underline"
               >
-                View Full Wire →
+                {t('fullWire')} →
               </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

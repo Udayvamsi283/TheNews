@@ -21,6 +21,8 @@ interface AuthContextType {
     preferredLanguage?: string;
     interests?: string[];
   }) => Promise<User>;
+  uploadAvatar: (file: File) => Promise<User>;
+  removeAvatar: () => Promise<User>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -84,6 +86,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   });
 
+  const uploadAvatarMutation = useMutation({
+    mutationFn: async (file: File) => {
+      return await apiClient.uploadAvatar(file);
+    },
+    onSuccess: (updatedUser) => {
+      queryClient.setQueryData(['auth-me'], updatedUser);
+      queryClient.setQueryData(['currentUser'], updatedUser);
+    }
+  });
+
+  const removeAvatarMutation = useMutation({
+    mutationFn: async () => {
+      return await apiClient.removeAvatar();
+    },
+    onSuccess: (updatedUser) => {
+      queryClient.setQueryData(['auth-me'], updatedUser);
+      queryClient.setQueryData(['currentUser'], updatedUser);
+    }
+  });
+
   const isAuthenticated = Boolean(user && user.status === 'active');
   const isAdmin = Boolean(user && user.role === 'admin' && user.status === 'active');
 
@@ -111,6 +133,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
         updateProfile: async (data) => {
           return await updateProfileMutation.mutateAsync(data);
+        },
+        uploadAvatar: async (file: File) => {
+          return await uploadAvatarMutation.mutateAsync(file);
+        },
+        removeAvatar: async () => {
+          return await removeAvatarMutation.mutateAsync();
         }
       }}
     >
